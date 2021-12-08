@@ -27,11 +27,11 @@ def load_national_trend_data():
     df.set_index("Date", drop = True, inplace = True)
     return df
 
-def load_county_data(county, state, download = False):
+def load_county_data(county, state, download_data= False):
     c = county.lower()
     s = state.lower()
     
-    if download == True:
+    if download_data == True:
         # Caution: this will take a long time.
         df = pd.read_csv("https://data.cdc.gov/api/views/8xkx-amqh/rows.csv?accessType=DOWNLOAD")
         df = df[(df["Recip_County"] == "{} County".format(county.capitalize())) & (df["Recip_State"] == state.upper())]
@@ -151,16 +151,16 @@ def national_vaccine_expectation_chart():
     ax.set_ylim(-12,12)
     ax.legend(loc = "lower left")
     
-    plt.title("Percentage Points Relative to Expected Rates")
+    plt.title("Percentage Points Relative to Expected National Rates")
     
     plt.show
     return None
 
 
-def county_vaccine_trends_chart(county_1 = "Montgomery, AL", 
-                                county_2 = "Multnomah, OR", 
+def county_vaccine_trends_chart(county_1 = "Montgomery County, AL", 
+                                county_2 = "Multnomah County, OR", 
                                 show_us_current = True,
-                                load_data = False):
+                                download_data = False):
     df = load_national_trend_data()
     
     complete_us = national_complete_pct(df)
@@ -184,9 +184,9 @@ def county_vaccine_trends_chart(county_1 = "Montgomery, AL",
     # Plot trends.
     counties = [county_1, county_2]
     for i in range(len(counties)):
-        c = counties[i].split(", ")[0].lower()
-        s = counties[i].split(", ")[1].lower()
-        df = load_county_data(county = c, state = s, download = False)
+        c = counties[i].split(" County, ")[0].lower()
+        s = counties[i].split(" County, ")[1].lower()
+        df = load_county_data(county = c, state = s, download_data = download_data)
         complete = county_complete_pct(df)
         one_dose = county_one_dose_pct(df)
         expected = county_expected_complete_pct(df)
