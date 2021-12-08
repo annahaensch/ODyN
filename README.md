@@ -1,4 +1,10 @@
+# Simulations
+
+*In Progress*
+
 # Visualizations
+
+## Vaccine Trend Visualizations
 
 To create visualizations for the national level data, use the following code from a jupyter notebook
 
