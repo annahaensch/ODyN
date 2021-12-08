@@ -9,7 +9,7 @@ national_vaccine_trends_chart()
 ![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
 
 ```
-county_vaccine_trends_chart()
+county_vaccine_trends_chart(county_1 = "Montgomery, AL", county_2 = "Multnomah, OR")
 ```
 ![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
 
