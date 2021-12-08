@@ -8,6 +8,17 @@ national_vaccine_trends_chart()
 ```
 ![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
 
+```
+county_vaccine_trends_chart()
+```
+![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
+
+```
+national_vaccine_expectation_chart()
+```
+![us_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_relative.png?raw=true)
+
+
 # Data Sources
 
 #### National Level Vaccination Trends
