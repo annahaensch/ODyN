@@ -9,16 +9,19 @@ national_vaccine_trends_chart()
 ![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
 
 ```
-county_vaccine_trends_chart(county_1 = "Montgomery, AL", county_2 = "Multnomah, OR")
-```
-![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
-
-```
 national_vaccine_expectation_chart()
 ```
 ![us_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_relative.png?raw=true)
 
-Feel free to download and adjust the code to customize the charts to different counties and dateranges.
+For county level data, this repository contains data for Montgomery County, AL and Multnomah County, OR, but additional data can also be downloaded directly from the CDC website by settting the optional `download` argument to `True`, but be advised that this is a large data set and it might take a few minutes to download. 
+```
+county_vaccine_trends_chart(county_1 = "Montgomery County, AL", county_2 = "Multnomah County, OR", download_data = False)
+```
+![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
+
+
+
+Feel free to download and adjust the code to customize the charts to different counties and date ranges.
 
 # Data Sources
 
