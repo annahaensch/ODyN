@@ -18,6 +18,7 @@ national_vaccine_expectation_chart()
 ```
 ![us_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_relative.png?raw=true)
 
+Feel free to download and adjust the code to customize the charts to different counties and dateranges.
 
 # Data Sources
 
