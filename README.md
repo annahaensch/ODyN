@@ -1,3 +1,13 @@
+# Visualizations
+
+To create visualizations for the national level data, use the following code from a jupyter notebook
+
+```
+from visualizations import *
+national_vaccine_trends_chart()
+```
+![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
+
 # Data Sources
 
 #### National Level Vaccination Trends
