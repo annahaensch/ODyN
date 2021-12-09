@@ -9,21 +9,28 @@
 To create visualizations for the national level data, use the following code from a jupyter notebook
 
 ```
-from visualizations import *
-national_vaccine_trends_chart()
+vaccine_trends_plot()
+
+relative_vaccine_trends_plot()
 ```
 ![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
 
-```
-national_vaccine_expectation_chart()
-```
 ![us_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_relative.png?raw=true)
 
 For county level data, this repository contains data for Montgomery County, AL and Multnomah County, OR, but additional data can also be downloaded directly from the CDC website by settting the optional `download_data` argument to `True` (Note: running the function with this argument will download the 160 MB dataset of all counties and therefore it might take a few minutes to run). 
 ```
-county_vaccine_trends_chart(county_1 = "Montgomery County, AL", county_2 = "Multnomah County, OR", download_data = False)
+vaccine_trends_plot(county = "Multnomah", 
+					state = "OR", 
+					show_us_current = True,
+					download_data = False)
+
+relative_vaccine_trends_plot(county = "Multnomah", 
+							 state = "OR",
+							 download_data = False)
 ```
 ![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
+
+![county_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_relative.png?raw=true)
 
 
 
