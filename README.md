@@ -24,9 +24,9 @@ vaccine_trends_plot(county = "Multnomah",
 					show_us_current = True,
 					download_data = False)
 
-relative_vaccine_trends_plot(county = "Multnomah", 
-							 state = "OR",
-							 download_data = False)
+relative_vaccine_trends_plot(county = "Multnomah",
+					state = "OR",
+					download_data = False)
 ```
 ![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
 
