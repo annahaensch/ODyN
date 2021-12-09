@@ -27,7 +27,7 @@ county_vaccine_trends_chart(county_1 = "Montgomery County, AL", county_2 = "Mult
 
 
 
-Feel free to download and adjust the code to customize the charts to different counties and date ranges.
+Feel free to download and adjust the code to customize the charts.
 
 # Data Sources
 
