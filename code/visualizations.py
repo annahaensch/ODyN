@@ -185,16 +185,20 @@ def vaccine_trends_plot(county = None,
     
     # Add horizontal line at current completely vaccinated.
     if show_us_current == True:
+        y = df.index[-1].year
+        m = df.index[-1].month
+        d = df.index[-1].day
         ax.plot((one_dose.index[0], one_dose.index[-1]),
                 (complete.iloc[-1],complete.iloc[-1]), 
                 color = "k", 
                 linewidth = 1, 
                 linestyle = "--", 
-                zorder = 0)
+                zorder = 0,
+                label = "US Complete Vaccination Rate {}-{}-{}".format(y,m,d))
         ax.annotate("{}%".format(np.around(complete.iloc[-1], decimals = 1)), 
                     (one_dose.index[0], complete.iloc[-1]+1))
 
-    ax.set_title("US National Vaccination Rates") 
+    ax.set_title("US National Vaccination Rates", fontsize = 15) 
 
     # Load county data.
     if county:
@@ -211,7 +215,7 @@ def vaccine_trends_plot(county = None,
             expected = county_expected_complete_pct(df)
 
             ax.set_title("Vaccination Rates in {} County, {}".format(
-                                c.capitalize(), s))   
+                                c.capitalize(), s), fontsize = 15)   
 
         else:
             raise ValueError("A two-letter state abbreviation must be given.")
@@ -232,11 +236,13 @@ def vaccine_trends_plot(county = None,
             label = "Expected Completely Vaccinated", 
             zorder = 0)
 
-    ax.set_xlabel("Date")
+
+    ax.set_xlabel("Date", fontsize = 12)
     ax.set_yticks([0,20,40,60,80])
+    ax.set_ylim(0,90)
     ax.set_yticklabels(["{}%".format(20*i) for i in range(5)])
-    ax.set_ylabel("Percentage")
-    ax.legend(loc = "lower right")
+    ax.set_ylabel("Percentage", fontsize = 12)
+    ax.legend(loc = "lower right", prop = {"size":12})
     plt.show()
     return None
 
@@ -262,8 +268,7 @@ def relative_vaccine_trends_plot(county = None,
     expected = national_expected_complete_pct(df)
 
     fig, ax = plt.subplots(figsize = (8,5))
-    ax.set_title("Percentage Points Difference Between Expected \n and Actual "
-                        "National Vaccine Rates")
+    ax.set_title("Relative US National Vaccination Rates", fontsize = 15)
 
     if county:
 
@@ -277,9 +282,8 @@ def relative_vaccine_trends_plot(county = None,
             one_dose = county_one_dose_pct(df)
             expected = county_expected_complete_pct(df)
 
-            ax.set_title("Percentage Points Difference Between Expected \n and "
-                "Actual Vaccine Rates in {} County, {}".format(
-                                c.capitalize(), s))  
+            ax.set_title("Relative Vaccination Rates in {} County, {}".format(
+                                c.capitalize(), s), fontsize = 15)  
 
         else:
             raise ValueError("A two-letter state abbreviation must be given.")
@@ -314,10 +318,10 @@ def relative_vaccine_trends_plot(county = None,
         label= "Fewer people than expected are completely vaccinated", 
         linewidth = 3)
     
-    ax.set_ylabel("Percentage Points")
-    ax.set_xlabel("Date")
+    ax.set_ylabel("Percentage Points", fontsize = 12)
+    ax.set_xlabel("Date", fontsize = 12)
     ax.set_ylim(-12,12)
-    ax.legend(loc = "lower left")
+    ax.legend(loc = "lower left", prop = {"size":12})
     
     plt.show()
     return None
