@@ -5,6 +5,8 @@ from datetime import timedelta
 from functools import reduce
 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as grid_spec
+from scipy import stats
 
 COLORS = {"light_orange":"#E69F00",
              "light_blue":"#56B4E9",
@@ -16,6 +18,12 @@ COLORS = {"light_orange":"#E69F00",
              "purple":"#9370DB",
              "black":"#000000",
              "silver":"#DCDCDC"}
+
+COLOR_MAP = {
+        0:"#e7e1ef",
+        1:"#c994c7",
+        2:"#dd1c77"
+    }
 
 START_DATE = pd.to_datetime("2021-04-19")
 US_POPULATION = 329500000
@@ -314,69 +322,119 @@ def relative_vaccine_trends_plot(county = None,
     plt.show()
     return None
 
-
-
-
-
-def plot_initial_networks(folder_name):
-
+def plot_initial_networks(model):
+    """ OpinionNetworkModel instance
+    """
     opinions = [False, True, False, True]
     weights = [False, False, True, True]
 
     # Load point df.
-    point_df = pd.read_csv(
-        "../data/symmetric_simulations_60periods_1000_2/point_df.csv",
-        index_col = 0)
+    belief_df = model.belief_df
 
-    fig, ax = plt.subplots(2,2,figsize = (15,15))
+    fig, ax = plt.subplots(figsize = (8,8))
     
-    for i in range(len(opinions)):
-        op = opinions[i]
-        wt = weights[i]
-        adjacency_df = pd.read_csv(
-            "../data/symmetric_simulations_60periods_1000_2/initial_adjacency_df_{}_{}.csv".format(
-                str(op), str(wt)),index_col = 0)
-        adjacency_df.columns = [int(i) for i in adjacency_df.columns]
+    op = model.include_opinion
+    wt = model.include_weight
 
-        stats_df = pd.read_csv("../data/symmetric_simulations_60periods_1000_2/initial_stats_df.csv", index_col = 0)
-        
-        # Plot people.
-        ax[i//2,i%2].scatter(point_df["x"], point_df["y"], 
-                   s = [int(w) for w in point_df["weight"].values],
-                   c = [COLOR_MAP[b] for b in point_df["belief"].values])
+    adjacency_df = model.adjacency_df
+    adjacency_df.columns = [int(i) for i in adjacency_df.columns]
 
-        for j in point_df.index:
-            for k in np.where(adjacency_df.loc[j,:] == 1)[0]:
-                ax[i//2,i%2].plot((point_df.loc[j,"x"], point_df.loc[k,"x"]),
-                                (point_df.loc[j,"y"], point_df.loc[k,"y"]),                            
-                                color = "k", lw = .5, zorder = 0)
+    cc = model.clustering_coeff
+    md = model.mean_deg
+    # Plot people.
+    ax.scatter(belief_df["x"], belief_df["y"], 
+               s = [int(w) for w in belief_df["weight"].values],
+               c = [COLOR_MAP[b] for b in belief_df["belief"].values])
 
-        # Turn off axes
-        ax[i//2,i%2].set_axis_off()
-        
-        # Add title
-        title = "Connections based on physical distance"
-        if i == 1:
-            title = "Connections based on physical distance and opinion proximity"
-        if i == 2:
-            title = "Connections based on physical distance and weight"
-        if i == 3:
+    for j in belief_df.index:
+        for k in np.where(adjacency_df.loc[j,:] == 1)[0]:
+            ax.plot((belief_df.loc[j,"x"], belief_df.loc[k,"x"]),
+                            (belief_df.loc[j,"y"], belief_df.loc[k,"y"]),                            
+                            color = "k", lw = .5, zorder = 0)
+
+    # Turn off axes
+    ax.set_axis_off()
+    
+    # Add title
+    title = "Connections based on physical distance"
+    if op == True:
+        if wt == True:
             title = "Connections based on physical distance, opinion proximity and weight"
-            
-        cc = stats_df.loc[str(op)+"/"+str(wt),"clust_coeff"]
-        md = stats_df.loc[str(op)+"/"+str(wt),"mean_deg"]
+        else:
+            title = "Connections based on physical distance and opinion proximity"
+    else:
 
-        title = title + "\n clustering coefficient: " + str(
-            np.around(cc, decimals = 3)) + "\n average degree: " + str(
-            np.around(md, decimals = 1))
-        ax[i//2,i%2].set_title(title)
+        title = "Connections based on physical distance and weight"
+
+
+    title = title + "\n clustering coefficient: " + str(
+        np.around(cc, decimals = 3)) + "\n average degree: " + str(
+        np.around(md, decimals = 1))
+    ax.set_title(title)
         
     # Add legend
-    ax[1,1].scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
-    ax[1,1].scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
-    ax[1,1].scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")     
+    ax.scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
+    ax.scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
+    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")     
     plt.legend(loc = "best")
     plt.axis()
 
-    plt.savefig("{}initial_network_plot.png".format(folder_name))
-    #plt.show()
+    plt.show()
+
+    None
+
+
+def get_ridge_plot(dynamic_belief_df, periods):
+    """ Ridgeplot of updating beliefs.
+
+    Inputs: 
+        dynamic_belief_df - (dataframe) updating beliefs across multiple periods
+        periods - (list) periods to show in plot.
+
+    Ouputs: 
+        Ridgeplot of updating belief distributions over periods.
+    """
+    c = ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c']
+    xx = np.linspace(0, 2, 1000)
+
+    gs = grid_spec.GridSpec(len(periods),1)
+    fig = plt.figure(figsize=(8,4))
+    i = 0
+
+    ax_objs = []
+
+    for p in range(len(periods)):
+        ax_objs.append(fig.add_subplot(gs[i:i+1, 0:]))
+        x = dynamic_belief_df[periods[p]].values
+        kde = stats.gaussian_kde(x)
+        ax_objs[-1].plot(xx, kde(xx), color = c[0])
+        ax_objs[-1].fill_between(xx,kde(xx), color=c[p], alpha = 0.8)
+
+        ax_objs[-1].set_yticks([])
+        ax_objs[-1].set_yticklabels([])
+        ax_objs[-1].set_ylabel('')
+
+        #ax_objs[-1].set_axis_off()
+        ax_objs[-1].text(2.05,0,"{} periods".format(periods[p]),fontweight="bold",fontsize=10,ha="left")
+
+        # make background transparent
+        rect = ax_objs[-1].patch
+        rect.set_alpha(0)
+
+        if i == len(periods)-1:
+            ax_objs[-1].set_xticks([0,1,2])
+            ax_objs[-1].set_xticklabels(["Not Hesitant", "Hesitant or Unsure","Strongly Hesitant"])
+        else:
+            ax_objs[-1].set_xticks([])
+            ax_objs[-1].set_xticklabels([])
+
+        spines = ["top","right","left","bottom"]
+        for s in spines:
+            ax_objs[-1].spines[s].set_visible(False)
+
+        i += 1
+
+    gs.update(hspace=-0.7)
+    ax_objs[0].set_title("Belief Dynamics over {} Periods".format(periods[-1]), fontsize =14)
+
+    return None
