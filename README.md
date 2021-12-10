@@ -28,9 +28,9 @@ relative_vaccine_trends_plot(county = "Multnomah",
 					state = "OR",
 					download_data = False)
 ```
-![county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_absolute.png?raw=true)
+![or_county_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_county_trends_absolute.png?raw=true)
 
-![county_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/county_trends_relative.png?raw=true)
+![or_county_trends_relative.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_county_trends_relative.png?raw=true)
 
 
 For the network tools there are two types of built in visualizations: the network plot, and the dynamics ridge plot.  There are accessed as follows. 
