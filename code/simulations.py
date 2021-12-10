@@ -1,53 +1,23 @@
 import pandas as pd
 import numpy as np
 import logging 
-# import sys
 import os
 import geojson
 
-# from scipy import stats
-# from scipy.stats import uniform
-# from scipy.stats import norm
-
-# from sklearn.neighbors import KernelDensity
-
 import math 
 import itertools
-
-# import matplotlib.pyplot as plt
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-# import matplotlib.gridspec as grid_spec
 
 import geopandas as gpd
 from geopy.geocoders import Nominatim
 from shapely.geometry import Point, Polygon, MultiPolygon
 import shapely.ops
 
-# import networkx as nx
-
-# import shapely.wkt
-
-
 from bs4 import BeautifulSoup
 import requests
-
-# import contextily as ctx             #map illustrating tool
-
-# from dask.distributed import Client, LocalCluster
-# from dask import delayed
-# import dask.bag as db
-# import json
 from abc import ABC, abstractmethod
 
 
 logging.basicConfig(level=logging.INFO)
-
-
-COLOR_MAP = {
-        0:"#e7e1ef",
-        1:"#c994c7",
-        2:"#dd1c77"
-    }
 
 class OpinionNetworkModel(ABC):
     """ Abstract base class for network model """
