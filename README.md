@@ -36,6 +36,7 @@ relative_vaccine_trends_plot(county = "Multnomah",
 For the network tools there are two types of built in visualizations: the network plot, and the dynamics ridge plot.  There are accessed as follows. 
 
 ```
+model = OpinionNetworkModel.initialize(num_points = 500)
 plot_initial_networks(model)
 ```
 ![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
@@ -47,6 +48,9 @@ sim.run_simulation(model = model, phases = 60)
 df = sim.dynamic_belief_df
 get_ridge_plot(df, periods = [0,10,20,40,60])
 ```
+
+![ridge_plot.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ridge_plot.png?raw=true)
+
 Feel free to download and adjust the code to customize the charts.
 
 # Data Sources
