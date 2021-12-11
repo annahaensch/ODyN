@@ -9,8 +9,9 @@ import itertools
 
 import geopandas as gpd
 from geopy.geocoders import Nominatim
-from shapely.geometry import Point, Polygon, MultiPolygon
+from shapely.geometry import Point, Polygon, MultiPolygon, shape
 import shapely.ops
+from pyproj import Proj
 
 from bs4 import BeautifulSoup
 import requests
@@ -63,25 +64,25 @@ class OpinionNetworkModel(ABC):
         """
             
         Inputs:
-            state - (str) Uppercase two-letter state name abbreviation, or None.
-            county - (str) Capitalized county name, or None.
-            num_points - (int) number of agents to plot.
-            n_modes - (int) number of categorical modes.
-            probabilities - (list) probabilities of each mode.
-            power_law_exponent - (float) exponent of power law
-            openmindedness - (float) inter-mode distanct that agents influence.
-            alpha - (float) Scaling factor for weight and distance, > 1.
-            beta - (float) Scaling factor for distance, > 0.
-            include_opinion - (boolean) If True, include distance in opinion space 
+            state: (str) Uppercase two-letter state name abbreviation, or None.
+            county: (str) Capitalized county name, or None.
+            num_points: (int) number of agents to plot.
+            n_modes: (int) number of categorical modes.
+            probabilities: (list) probabilities of each mode.
+            power_law_exponent: (float) exponent of power law
+            openmindedness: (float) inter-mode distanct that agents influence.
+            alpha: (float) Scaling factor for weight and distance, > 1.
+            beta: (float) Scaling factor for distance, > 0.
+            include_opinion: (boolean) If True, include distance in opinion space 
                 in the probability measure.
-            include_weight - (boolean) If True, include influencer weight in the 
+            include_weight: (boolean) If True, include influencer weight in the 
                 probability measure.
-            reach_dict - (dictionary) value is propotional reach of key.
-            left_openmindedness - (float) distance in opinion space that left 
+            reach_dict: (dictionary) value is propotional reach of key.
+            left_openmindedness: (float) distance in opinion space that left 
                 mega-influencers can reach.
-            right_openmindedness - (float) distance in opinion space that right 
+            right_openmindedness: (float) distance in opinion space that right 
                 mega-influencers can reach.
-            threshold - (int) value below which opinions no longer change.
+            threshold: (int) value below which opinions no longer change.
 
         Outputs: 
             Fully initialized but untrained OpinionNetwork instance.
@@ -106,7 +107,7 @@ class OpinionNetworkModel(ABC):
 
         # Seed network agents and connections.
         if point_df is None:
-            model.geo_df = model.get_county_mapping_data()
+            model.geo_df = model.get_county_mapping_data(state, county)
             model.point_df = model.random_points_on_triangle()
         else:
             model.point_df = point_df
@@ -126,32 +127,48 @@ class OpinionNetworkModel(ABC):
         
         return model
 
-    def get_county_mapping_data(self):
+    def get_county_mapping_data(self, county = None, state = None):
         """ Return geodataframe with location data.
 
+        Inputs:
+            county: (str) Capitalized county name, or None.
+            state: (str) Uppercase two-letter state name abbreviation, or None.
+            
         Returns: 
             Geodataframe with polygon geometry, population and 
             area data for county, state.
         """
-        county = self.county
+        df = pd.DataFrame(index = [0], columns = ["county","state","area (km^2)",
+                        "population (2019)", "density","geometry"])
         if county is None:
             county = "Montgomery"
-        state = self.state
+        df.loc[0,"county"] = county
+
         if state is None:
             state = "AL"
+        df.loc[0,"state"] = state
 
         county = county.split(" County")[0].split(" county")[0].capitalize()
         state = state.upper()
+
+        logging.info("\n Getting data for {} County, {}.".format(county, state))
 
         geolocator = Nominatim(user_agent="VaccineHesitancy")
         geo = geolocator.geocode("{} County, {}".format(county, state),
                                 geometry='geojson')
 
+        if geo is None:
+            raise ValueError("Check the spelling of your county name.")
+
+        assert geo.raw["display_name"].split(", ")[0] == "{} County".format(
+                        county), "Chcek the spelling of your county name."
+
         full_state_name = geo.raw["display_name"].split(", ")[1]
         polygon = Polygon(geo.raw["geojson"]["coordinates"][0])
+        df["geometry"] = polygon
 
         # Convert to GeoDataFrame
-        geo_df = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon])
+        geo_df = gpd.GeoDataFrame(df, index=[0], crs='epsg:4326', geometry=[polygon])
 
         #Add spherical coordinate reference system (crs) to lat/long pairs.
         geo_df.crs = "EPSG:4326" 
@@ -159,13 +176,15 @@ class OpinionNetworkModel(ABC):
         #Project onto a flat crs for mapping.
         geo_df = geo_df.to_crs(epsg=3857) 
 
-        # Get areas
-        geo_df["area"] = geo_df["geometry"].area
-        geo_df["county"] = county
-        if self.county == None:
-            geo_df["county"] = "no_name_county"
-        if self.state == None:
-            geo_df["state"] = "no_name_state"
+        # Get area
+        lon, lat = zip(*geo.raw["geojson"]["coordinates"][0])
+        pa = Proj(
+            "+proj=aea +lat_1=37.0 +lat_2=41.0 +lat_0=39.0 +lon_0=-106.55")
+        x, y = pa(lon, lat)
+        coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
+        area = shape(coord_proj).area/(10**6) # area in km^2
+
+        geo_df["area (km^2)"] = area
 
         # Get population.
 
@@ -183,17 +202,40 @@ class OpinionNetworkModel(ABC):
         df = df[(df["County or equivalent"] == county)&(df["State or equivalent"
             ] == full_state_name)]
 
-        geo_df["population"] = df["Population (2019 estimate)"].iloc[0]
+        geo_df["population (2019)"] = df["Population (2019 estimate)"].iloc[0]
+        geo_df["density"] = geo_df["population (2019)"]/geo_df["area (km^2)"]
+
+        # Load vaccine hesitancy data.
+        try: 
+            hesitancy_df = pd.read_csv(
+                "../data/{}_county_{}_hesitancy.csv".format(
+                county.lower(), state.lower()), index_col = 0)
+
+        except:
+            hesitancy_df = pd.read_csv(
+                "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
+            hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
+                            county.capitalize(), full_state_name.capitalize())]
+
+        geo_df["strongly_hesitant"] = hesitancy_df[
+                        "Estimated strongly hesitant"].iloc[0]
+        geo_df["hesitant_or_unsure"] = hesitancy_df[
+                        "Estimated hesitant or unsure"].iloc[0]
+        geo_df["not_hesitant"] = 1 - (geo_df["hesitant_or_unsure"] + 
+                        geo_df["strongly_hesitant"])
 
         return geo_df
 
-    def _make_triangulation(self):
+    def _make_triangulation(self, geo_df):
         """ Print geojson dictionary with county triangulation.
+
+        Input:
+            geo_df: (dataframe) location geomatic dataframe typically output 
+                from get_county_mapping_data(). 
 
         Output: 
             Geojson file printed to ../data/<state abbreviation>/<county>
         """
-        geo_df = self.geo_df
         county = geo_df.loc[0,"county"].lower()
         state = geo_df.loc[0,"state"].lower()
         path = "../data/{}".format(state)
@@ -270,7 +312,6 @@ class OpinionNetworkModel(ABC):
         
         return pd.DataFrame(points, columns = ["x","y"])
 
-
     def assign_weights_and_beliefs(self):
         """ Assign weights and beliefs (i.e. modes) accoring to probabilities.
         
@@ -307,7 +348,7 @@ class OpinionNetworkModel(ABC):
         """ Return dataframe of probability that row n influences column m.
         
         Inputs: 
-            belief_df - (dataframe) xy-coordinats, beliefs and weights of 
+            belief_df: (dataframe) xy-coordinats, beliefs and weights of 
                 agents.
 
         Returns: 
@@ -359,7 +400,7 @@ class OpinionNetworkModel(ABC):
         """ Compute NxN adjacency dataframe.
         
         Inputs: 
-            prob_df - (dataframe) num_agents x num_agents dataframe giving  
+            prob_df: (dataframe) num_agents x num_agents dataframe giving  
                 probabiltiy of influce row n on column m.
         Outputs: 
             Dataframe where row n and column n is a 1 if n influces m, 
@@ -379,7 +420,7 @@ class OpinionNetworkModel(ABC):
         """ Return clustering coefficient and mean degree. 
         
         Inputs: 
-            adjacency_df - (dataframe) num_points x num_points dataframe, where 
+            adjacency_df: (dataframe) num_points x num_points dataframe, where 
                 a 1 in row n column m indicates that agent n influences agent m.
         Returns: 
             Tuple of clustering coefficient and mean degree of 
@@ -478,13 +519,13 @@ class NetworkSimulation(ABC):
                         threshold):
         """ Returns updated belief_df.
         Inputs: 
-            belief_df - (dataframe)
-            adjacency_df - (dataframe)
-            left_openmindedness - (float) distance in opinion space that left 
+            belief_df: (dataframe)
+            adjacency_df: (dataframe)
+            left_openmindedness: (float) distance in opinion space that left 
                 mega-influencers can reach.
-            right_openmindedness - (float) distance in opinion space that right 
+            right_openmindedness: (float) distance in opinion space that right 
                 mega-influencers can reach.
-            threshold - (int) value below which opinions no longer change.
+            threshold: (int) value below which opinions no longer change.
 
         Returns: 
             Updated belief_df after one round of Hegselmann-Krause.
