@@ -19,16 +19,17 @@ This will return a geodataframe with area, population estimates, mapping coordin
 * 1 - *hesitant or unsure*
 * 2 - *strongly hesitant*
 
+These can be loaded direction from the geo_df.
+
+```
+geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
+hesitancy_dict = get_hesitancy_dict(geo_df)
+```
+
 A model can be initialized with 
 ```
 from simulations import *
-
-# Read hesitancies from geo_df.
-not_hesitant = geo_df.loc[0,"not_hesitant"]
-hesitant_or_unsure = geo_df.loc[0,"hesitant_or_unsure"]
-strongly_hesitant = geo_df.loc[0,"strongly_hesitant"]
-
-p = [not_hesitant,hesitant_or_unsure,strongly_hesitant]
+p = list(hesitancy_dict.values())
 
 # Load model object.
 model = OpinionNetworkModel(n_modes = 3, 
@@ -36,7 +37,7 @@ model = OpinionNetworkModel(n_modes = 3,
                            )
 
 # Populate model.
-model.populate_model(num_agents = 500, geo_df = geo_df)
+model.populate_model(num_agents = 500, density = geo_df.loc[0,"density"])
 
 # Plot initial network.
 model.plot_initial_network()
