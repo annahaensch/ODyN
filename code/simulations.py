@@ -84,22 +84,18 @@ class OpinionNetworkModel(ABC):
         self.clustering_coefficient = 0
         self.mean_degree = 0
 
-    def populate_model(self, num_agents = 500, geo_df = None, show_plot = False):
+    def populate_model(self, num_agents = None, density = None, show_plot = False):
         """ Fully initialized but untrained OpinionNetworkModel instance.
 
         Input:
             num_agents: (int) number of agents to plot.
-            geo_df: (dataframe) location geomatic dataframe typically output 
-                from get_county_mapping_data(). 
             show_plot: (bool) if true then plot is shown. 
         
         Output: 
             OpinionNetworkModel instance.
         """
-        if geo_df is None:
-            geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
-        agent_df = self.add_random_agents_to_triangle(geo_df, 
-            num_agents = num_agents)
+        agent_df = self.add_random_agents_to_triangle(num_agents = num_agents, 
+            density = density)
         belief_df = self.assign_weights_and_beliefs(agent_df)
         prob_df = self.compute_probability_array(belief_df)
         adjacency_df = self.compute_adjacency(prob_df)
@@ -127,7 +123,7 @@ class OpinionNetworkModel(ABC):
         plot_network(self)
         return None
 
-    def add_random_agents_to_triangle(self, geo_df, num_agents = None, 
+    def add_random_agents_to_triangle(self, num_agents = None, density = None, 
         show_plot = False):
         """ Assign N points on a triangle using Poisson point process.
         
@@ -136,28 +132,38 @@ class OpinionNetworkModel(ABC):
                 from get_county_mapping_data(). 
             num_agents: (int) number of agents to add to the triangle.  If None, 
                 then agents are added according to density.
+            density: (float) density of agents, if none, then num_agents are plotted
+                in triangle with sarea 1 km^2.
             show_plot: (bool) if true then plot is shown. 
 
         Returns: 
             An num_agents x 2 dataframe of point coordinates.
         """ 
-        county = geo_df.loc[0,"county"]
-        state = geo_df.loc[0,"state"]  
+        if density is not None:
+            # Make sure that agents are plotted with the given density.
+            if num_agents is not None:
+                # Plot num_agents on variable sized triangle with correct density.
+                b = 1419 * (num_agents/density) ** (1/2)
+                triangle_object = Polygon([[0,0],[b,0], [b/2,b],[0,0]])
+                
+            if num_agents is None:
+                # Choose num_agents to fill triangle with area 1 km^2.
+                b = 1419
+                triangle_object = Polygon([[0,0],[b,0], [b/2,b],[0,0]])
+                num_agents = int(density)
 
-        # Initialize triangulation.
-        make_triangulation(geo_df)
-        
-        c = county.lower().split(" county")[0]
-        s = state.lower()
-        with open('../data/{}/{}/triangulation_dict.geojson'.format(s,c)) as f:
-            tri_dict = geojson.load(f)
+        if density is None:
+            # If no density is given, fill triangle with area 1 km^2.
+            if num_agents is not None:        
+                b = 1419
+                triangle_object = Polygon([[0,0],[b,0], [b/2,b],[0,0]])
 
-        T = np.array([Polygon(t).area for t in tri_dict["geometry"]["coordinates"]])
-        triangle_object = Polygon(tri_dict["geometry"]["coordinates"][T.argmax()])
+            if num_agents is None:
+                raise ValueError("You must specify either the density or the "
+                    "number of agents.")
 
-        # Get boundary of triangle.
+
         bnd = list(triangle_object.boundary.coords)
-
         gdf = gpd.GeoDataFrame(geometry = [triangle_object])
 
         # Establish initial CRS
@@ -174,15 +180,7 @@ class OpinionNetworkModel(ABC):
         x, y = pa(lon, lat)
         coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
         area = shape(coord_proj).area / (10 ** 6) # area in km^2
-        
-        # If no number of people is given, use population density.
-        if num_agents is None:
-            density = geo_df.loc[0,"density"]
-            num_agents = int(area * density)
 
-            logging.info("\n Using population density to place {} agents.".format(
-                num_agents)) 
-            
         # Get Vertices
         V1 = np.array(bnd[0])
         V2 = np.array(bnd[1])
