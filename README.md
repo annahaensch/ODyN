@@ -18,6 +18,7 @@ This will return a geodataframe with area, population estimates, mapping coordin
 * 0 - *not vaccine hesitant*
 * 1 - *hesitant or unsure*
 * 2 - *strongly hesitant*
+
 A model can be initialized with 
 ```
 from simulations import *
