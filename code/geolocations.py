@@ -113,6 +113,22 @@ def get_county_mapping_data(county = None, state = None):
 
     return geo_df
 
+def get_hesitancy_dict(geo_df):
+    """ Return dictionary of hesitancy proportions.
+
+    Input:
+        geo_df: (dataframe) location geomatic dataframe typically output 
+            from get_county_mapping_data(). 
+
+    Output: 
+        Dictionary with keys not_hesitant, hesitant_or_unsure, and 
+        strongly_hesitant.
+    """
+    return {"not_hesitant" : geo_df.loc[0,"not_hesitant"],
+            "hesitant_or_unsure" : geo_df.loc[0,"hesitant_or_unsure"],
+            "strongly_hesitant" : geo_df.loc[0,"strongly_hesitant"]}
+
+
 def make_triangulation(geo_df):
     """ Print geojson dictionary with county triangulation.
 
