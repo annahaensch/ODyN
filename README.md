@@ -1,6 +1,39 @@
 # Simulations
 
-*In Progress*
+To load geo and vaccine hesitancy data for a specific county, such as Montgomery, AL, begin with 
+
+```
+from geolocations import *
+get_county_mapping_data(county = "Montgomery", state = "AL")
+```
+Data for Montgomery, AL and Multnomah, OR has been preloaded to it will run quickly, other counties will download data directly from the cdc, which might take a few minutes. From here you can read the probabilities of modes
+* 0 - *not vaccine hesitant*
+* 1 - *hesitant or unsure*
+* 2 - *strongly hesitant*
+A model can be initialized with 
+```
+from simulations import *
+
+# Read hesitancies from geo_df.
+not_hesitant = geo_df.loc[0,"not_hesitant"]
+hesitant_or_unsure = geo_df.loc[0,"hesitant_or_unsure"]
+strongly_hesitant = geo_df.loc[0,"strongly_hesitant"]
+
+p = [not_hesitant,hesitant_or_unsure,strongly_hesitant]
+
+# Load model object.
+model = OpinionNetworkModel(n_modes = 3, 
+                            probabilities = p
+                           )
+
+# Populate model.
+model.populate_model(num_agents = 500, geo_df = geo_df)
+
+# Plot initial network.
+model.plot_initial_network()
+```
+![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
+
 
 # Visualizations
 
@@ -39,7 +72,7 @@ For the network tools there are two types of built in visualizations: the networ
 model = OpinionNetworkModel.initialize(num_points = 500)
 plot_initial_networks(model)
 ```
-![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
+
 
 ```
 sim = NetworkSimulation()
