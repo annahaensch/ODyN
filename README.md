@@ -1,4 +1,12 @@
-# Simulations
+# Opinion Dynamics & COVID Vaccine Hesitancy
+
+## Background
+
+This repository contains tools to simulate opinion dyamics related to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
+
+* *Link to come*
+
+## Simulations
 
 To load geo and vaccine hesitancy data for a specific county, such as Montgomery, AL, begin with 
 
@@ -43,8 +51,6 @@ sim.plot_simulation_results()
 ```
 ![ridge_plot.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ridge_plot.png?raw=true)
 
-
-# Visualizations
 
 ## Vaccine Trend Visualizations
 
