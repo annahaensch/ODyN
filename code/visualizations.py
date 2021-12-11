@@ -4,6 +4,8 @@ import numpy as np
 from datetime import timedelta
 from functools import reduce
 
+import geopandas as gpd
+
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
 from scipy import stats
@@ -326,12 +328,53 @@ def relative_vaccine_trends_plot(county = None,
     plt.show()
     return None
 
-def plot_initial_networks(model):
+def plot_agents_on_triangle(triangle_object, agent_df):
+    """ Returns triangle filled with agents.
+
+    Inputs: 
+        triangle_object : (polygon) shapely triangle object.
+        agent_df: (dataframe) x,y coordinates for agents.
+
+    Outputs: 
+        Plot of points on triangle.
+    """
+    fig, ax = plt.subplots(figsize = (8,8))
+    df = gpd.GeoDataFrame({"geometry": triangle_object}, index = [0])
+    df.boundary.plot(ax = ax, alpha=1, edgecolor = COLORS["light_blue"])
+    ax.scatter(agent_df["x"], agent_df["y"], color = COLORS["dark_blue"], 
+        zorder = 0)
+    ax.set_axis_off()
+    
+    plt.show()
+    return None
+
+def plot_agents_on_triangle_with_belief(belief_df):
+    """ Returns triangle filled with agents.
+
+    Inputs: 
+        triangle_object : (polygon) shapely triangle object.
+        agents: (dataframe) x,y coordinates for agents.
+
+    Outputs: 
+        Plot of points on triangle.
+    """
+    fig, ax = plt.subplots(figsize = (8,8))
+    ax.scatter(belief_df["x"], belief_df["y"],
+        s = [int(w) for w in belief_df["weight"].values],
+        c = [COLOR_MAP[b] for b in belief_df["belief"].values])
+    ax.set_axis_off()
+    ax.scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
+    ax.scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
+    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")     
+    plt.legend(loc = "best")
+    
+    plt.show()
+    return None
+
+
+def plot_network(model):
     """ OpinionNetworkModel instance
     """
-    opinions = [False, True, False, True]
-    weights = [False, False, True, True]
-
     # Load point df.
     belief_df = model.belief_df
 
@@ -343,8 +386,8 @@ def plot_initial_networks(model):
     adjacency_df = model.adjacency_df
     adjacency_df.columns = [int(i) for i in adjacency_df.columns]
 
-    cc = model.clustering_coeff
-    md = model.mean_deg
+    cc = model.clustering_coefficient
+    md = model.mean_degree
     # Plot people.
     ax.scatter(belief_df["x"], belief_df["y"], 
                s = [int(w) for w in belief_df["weight"].values],
@@ -388,28 +431,29 @@ def plot_initial_networks(model):
     None
 
 
-def get_ridge_plot(dynamic_belief_df, periods):
+def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
     """ Ridgeplot of updating beliefs.
 
     Inputs: 
-        dynamic_belief_df - (dataframe) updating beliefs across multiple periods
-        periods - (list) periods to show in plot.
+        dynamic_belief_df - (dataframe) updating beliefs across multiple phases
+        phases - (list) phases to show in plot.
+        reach_dict: (dictionary) value is propotional reach of key.
 
     Ouputs: 
-        Ridgeplot of updating belief distributions over periods.
+        Ridgeplot of updating belief distributions over phases.
     """
     c = ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c']
     xx = np.linspace(0, 2, 1000)
 
-    gs = grid_spec.GridSpec(len(periods),1)
+    gs = grid_spec.GridSpec(len(phases),1)
     fig = plt.figure(figsize=(8,4))
     i = 0
 
     ax_objs = []
 
-    for p in range(len(periods)):
+    for p in range(len(phases)):
         ax_objs.append(fig.add_subplot(gs[i:i+1, 0:]))
-        x = dynamic_belief_df[periods[p]].values
+        x = dynamic_belief_df[phases[p]].values
         kde = stats.gaussian_kde(x)
         ax_objs[-1].plot(xx, kde(xx), color = c[0])
         ax_objs[-1].fill_between(xx,kde(xx), color=c[p], alpha = 0.8)
@@ -419,15 +463,18 @@ def get_ridge_plot(dynamic_belief_df, periods):
         ax_objs[-1].set_ylabel('')
 
         #ax_objs[-1].set_axis_off()
-        ax_objs[-1].text(2.05,0,"{} periods".format(periods[p]),fontweight="bold",fontsize=10,ha="left")
+        ax_objs[-1].text(2.05,0,"{} phases".format(phases[p]),fontweight="bold",
+            fontsize=10,ha="left")
 
         # make background transparent
         rect = ax_objs[-1].patch
         rect.set_alpha(0)
 
-        if i == len(periods)-1:
+        if i == len(phases)-1:
             ax_objs[-1].set_xticks([0,1,2])
-            ax_objs[-1].set_xticklabels(["Not Hesitant", "Hesitant or Unsure","Strongly Hesitant"])
+            ax_objs[-1].set_xticklabels(["Not Hesitant", 
+                                        "Hesitant or Unsure",
+                                        "Strongly Hesitant"])
         else:
             ax_objs[-1].set_xticks([])
             ax_objs[-1].set_xticklabels([])
@@ -439,6 +486,11 @@ def get_ridge_plot(dynamic_belief_df, periods):
         i += 1
 
     gs.update(hspace=-0.7)
-    ax_objs[0].set_title("Belief Dynamics over {} Periods".format(periods[-1]), fontsize =14)
+    left = int(reach_dict[0] * 100)
+    right = int(reach_dict[2] *100)
+    ax_objs[0].set_title("Left Influencer Reach: {}%\nRight Influencer Reach: {}%".format(left, right), 
+        fontsize =12)
 
+    plt.suptitle("Belief Dynamics over {} Phases".format(phases[-1]), 
+        fontsize =14, y = 1.05)
     return None

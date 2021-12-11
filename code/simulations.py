@@ -17,56 +17,31 @@ from bs4 import BeautifulSoup
 import requests
 from abc import ABC, abstractmethod
 
+from geolocations import *
+from visualizations import *
 
 logging.basicConfig(level=logging.INFO)
 
 class OpinionNetworkModel(ABC):
     """ Abstract base class for network model """
         
-    def __init__(self, state = None, county = None):
-        self.state = state
-        self.county = county
-        self.geo_df = None
-        
-        self.num_points = None
-        self.n_modes = None
-        self.probabilities = None
-        self.reach_dict = None
-        self.power_law_exponent = None
-
-        self.belief_df = None
-        self.prob_df = None
-        self.adjacency_df = None
-
-        self.mega_influencer_df = None
-        self.clustering_coeff = 0
-        self.mean_deg = 0
-        
-    @classmethod
-    def initialize(cls, 
-                    point_df = None,
-                    state = None, 
-                    county = None, 
-                    num_points = None, 
-                    n_modes = 3, 
-                    probabilities = [.45,.1,.45],
-                    power_law_exponent = 2.5,
-                    openmindedness = 1.5,
-                    alpha = 1.6, 
-                    beta = 3, 
-                    include_opinion = True, 
-                    include_weight = True,
-                    reach_dict = {0:.8, 2:.8},
-                    left_openmindedness = 1.5,
-                    right_openmindedness = 1.5,
-                    threshold = -1
-                    ):
-        """
+    def __init__(self, 
+                n_modes = 3, 
+                probabilities = [.45,.1,.45], 
+                power_law_exponent = 2.5,
+                openmindedness = 1.5,
+                alpha = 1.6, 
+                beta = 3,
+                include_opinion = True,
+                include_weight = True,
+                reach_dict = {0:.8,2:.8},
+                left_openmindedness = 1.5,
+                right_openmindedness = 1.5,
+                threshold = -1
+                ):
+        """Returns initialized OpinionNetworkModel.
             
         Inputs:
-            state: (str) Uppercase two-letter state name abbreviation, or None.
-            county: (str) Capitalized county name, or None.
-            num_points: (int) number of agents to plot.
             n_modes: (int) number of categorical modes.
             probabilities: (list) probabilities of each mode.
             power_law_exponent: (float) exponent of power law
@@ -85,211 +60,128 @@ class OpinionNetworkModel(ABC):
             threshold: (int) value below which opinions no longer change.
 
         Outputs: 
-            Fully initialized but untrained OpinionNetwork instance.
+            Fully initialized OpinionNetwork instance.
         """
-        model = cls(state = state, county = county)
+        self.n_modes = n_modes
+        self.probabilities = probabilities
+        self.power_law_exponent = power_law_exponent
+        self.openmindedness = openmindedness
+        self.alpha = alpha
+        self.beta = beta
+        self.include_opinion = include_opinion
+        self.include_weight = include_weight
+        self.reach_dict = reach_dict
+        self.left_openmindedness = left_openmindedness
+        self.right_openmindedness = right_openmindedness
+        self.threshold = threshold
 
-        # Set network hyperparameters.
-        model.num_points = num_points
-        model.n_modes = n_modes
-        model.probabilities = probabilities
-        model.power_law_exponent = power_law_exponent
-        model.reach_dict = reach_dict
-        model.openmindedness = openmindedness
-        model.alpha = alpha
-        model.beta = beta
-        model.include_opinion = include_opinion 
-        model.include_weight = include_weight
-        model.reach_dict = reach_dict
-        model.left_openmindedness = left_openmindedness
-        model.right_openmindedness = right_openmindedness
-        model.threshold = threshold
+        self.agent_df = None
+        self.belief_df = None
+        self.prob_df = None
+        self.adjacency_df = None
+        self.mega_influencer_df = None
+        
+        self.clustering_coefficient = 0
+        self.mean_degree = 0
 
-        # Seed network agents and connections.
-        if point_df is None:
-            model.geo_df = model.get_county_mapping_data(state, county)
-            model.point_df = model.random_points_on_triangle()
-        else:
-            model.point_df = point_df
-        belief_df = model.assign_weights_and_beliefs()
-        model.belief_df = belief_df
-        prob_df = model.compute_probability_array(belief_df)
-        model.prob_df = prob_df
+    def populate_model(self, num_agents = 500, geo_df = None, show_plot = False):
+        """ Fully initialized but untrained OpinionNetworkModel instance.
 
-        adjacency_df = model.compute_adjacency(prob_df)
-        model.adjacency_df = adjacency_df
-        model.mega_influencer_df = model.connect_mega_influencers()
+        Input:
+            num_agents: (int) number of agents to plot.
+            geo_df: (dataframe) location geomatic dataframe typically output 
+                from get_county_mapping_data(). 
+            show_plot: (bool) if true then plot is shown. 
+        
+        Output: 
+            OpinionNetworkModel instance.
+        """
+        if geo_df is None:
+            geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
+        agent_df = self.add_random_agents_to_triangle(geo_df, 
+            num_agents = num_agents)
+        belief_df = self.assign_weights_and_beliefs(agent_df)
+        prob_df = self.compute_probability_array(belief_df)
+        adjacency_df = self.compute_adjacency(prob_df)
+
+        # Connect mega-influencers
+        mega_influencer_df = self.connect_mega_influencers(belief_df)
         
         # Compute network statistics.
-        cc, md = model.compute_network_stats(adjacency_df)
-        model.clustering_coeff = cc
-        model.mean_deg = md
+        cc, md = self.compute_network_stats(adjacency_df)
+
+        self.agent_df = agent_df
+        self.belief_df = belief_df
+        self.prob_df = prob_df
+        self.adjacency_df = adjacency_df
+        self.mega_influencer_df = mega_influencer_df
+        self.clustering_coefficient = cc
+        self.mean_degree = md
         
-        return model
+        if show_plot == True:
+            self.plot_initial_network()
 
-    def get_county_mapping_data(self, county = None, state = None):
-        """ Return geodataframe with location data.
+        return None
 
-        Inputs:
-            county: (str) Capitalized county name, or None.
-            state: (str) Uppercase two-letter state name abbreviation, or None.
-            
-        Returns: 
-            Geodataframe with polygon geometry, population and 
-            area data for county, state.
-        """
-        df = pd.DataFrame(index = [0], columns = ["county","state","area (km^2)",
-                        "population (2019)", "density","geometry"])
-        if county is None:
-            county = "Montgomery"
-        df.loc[0,"county"] = county
+    def plot_initial_network(self):
+        plot_network(self)
+        return None
 
-        if state is None:
-            state = "AL"
-        df.loc[0,"state"] = state
-
-        county = county.split(" County")[0].split(" county")[0].capitalize()
-        state = state.upper()
-
-        logging.info("\n Getting data for {} County, {}.".format(county, state))
-
-        geolocator = Nominatim(user_agent="VaccineHesitancy")
-        geo = geolocator.geocode("{} County, {}".format(county, state),
-                                geometry='geojson')
-
-        if geo is None:
-            raise ValueError("Check the spelling of your county name.")
-
-        assert geo.raw["display_name"].split(", ")[0] == "{} County".format(
-                        county), "Chcek the spelling of your county name."
-
-        full_state_name = geo.raw["display_name"].split(", ")[1]
-        polygon = Polygon(geo.raw["geojson"]["coordinates"][0])
-        df["geometry"] = polygon
-
-        # Convert to GeoDataFrame
-        geo_df = gpd.GeoDataFrame(df, index=[0], crs='epsg:4326', geometry=[polygon])
-
-        #Add spherical coordinate reference system (crs) to lat/long pairs.
-        geo_df.crs = "EPSG:4326" 
-
-        #Project onto a flat crs for mapping.
-        geo_df = geo_df.to_crs(epsg=3857) 
-
-        # Get area
-        lon, lat = zip(*geo.raw["geojson"]["coordinates"][0])
-        pa = Proj(
-            "+proj=aea +lat_1=37.0 +lat_2=41.0 +lat_0=39.0 +lon_0=-106.55")
-        x, y = pa(lon, lat)
-        coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
-        area = shape(coord_proj).area/(10**6) # area in km^2
-
-        geo_df["area (km^2)"] = area
-
-        # Get population.
-
-        url = "https://en.wikipedia.org/wiki/List_of_United_States_counties_and_county_equivalents"
-
-        # Load county population 
-        request = requests.get(url) 
-        html_content = request.text
-        soup = BeautifulSoup(html_content,"lxml")
-        county_tables = soup.find_all("table", {"class":"wikitable sortable"})
-
-        df=pd.read_html(str(county_tables))
-        df=pd.DataFrame(df[0])
-        df["County or equivalent"] = [g.split("[")[0] for g in df["County or equivalent"]]
-        df = df[(df["County or equivalent"] == county)&(df["State or equivalent"
-            ] == full_state_name)]
-
-        geo_df["population (2019)"] = df["Population (2019 estimate)"].iloc[0]
-        geo_df["density"] = geo_df["population (2019)"]/geo_df["area (km^2)"]
-
-        # Load vaccine hesitancy data.
-        try: 
-            hesitancy_df = pd.read_csv(
-                "../data/{}_county_{}_hesitancy.csv".format(
-                county.lower(), state.lower()), index_col = 0)
-
-        except:
-            hesitancy_df = pd.read_csv(
-                "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
-            hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
-                            county.capitalize(), full_state_name.capitalize())]
-
-        geo_df["strongly_hesitant"] = hesitancy_df[
-                        "Estimated strongly hesitant"].iloc[0]
-        geo_df["hesitant_or_unsure"] = hesitancy_df[
-                        "Estimated hesitant or unsure"].iloc[0]
-        geo_df["not_hesitant"] = 1 - (geo_df["hesitant_or_unsure"] + 
-                        geo_df["strongly_hesitant"])
-
-        return geo_df
-
-    def _make_triangulation(self, geo_df):
-        """ Print geojson dictionary with county triangulation.
-
+    def add_random_agents_to_triangle(self, geo_df, num_agents = None, 
+        show_plot = False):
+        """ Assign N points on a triangle using Poisson point process.
+        
         Input:
             geo_df: (dataframe) location geomatic dataframe typically output 
                 from get_county_mapping_data(). 
-
-        Output: 
-            Geojson file printed to ../data/<state abbreviation>/<county>
-        """
-        county = geo_df.loc[0,"county"].lower()
-        state = geo_df.loc[0,"state"].lower()
-        path = "../data/{}".format(state)
-        if os.path.exists(path) == False:
-            os.mkdir(path)
-        path = path + "/{}".format(county)
-        if os.path.exists(path) == False:
-            os.mkdir(path)
-
-        tri = shapely.ops.triangulate(geo_df.loc[0,"geometry"])
-        inner_tri = [t for t in tri if t.within(geo_df.loc[0,"geometry"])]
-
-        tri_dict = {"type":"Feature",
-                        "geometry": {
-                            "type":"MultiPolygon",
-                            "coordinates":[list(t.exterior.coords
-                                ) for t in inner_tri]
-                                    },
-                    "properties":county}
-        label = county.split(", {}".format(state))[0].replace(" ","_").lower()
-
-        with open('{}/triangulation_dict.geojson'.format(path), 'w') as the_file:
-            geojson.dump(tri_dict, the_file)
-        return None
-
-    def random_points_on_triangle(self):
-        """ Assign N points on a triangle using Poisson point process.
+            num_agents: (int) number of agents to add to the triangle.  If None, 
+                then agents are added according to density.
+            show_plot: (bool) if true then plot is shown. 
 
         Returns: 
-            An num_points x 2 dataframe of point coordinates.
+            An num_agents x 2 dataframe of point coordinates.
         """ 
-        geo_df = self.geo_df   
-        num_points = self.num_points
         county = geo_df.loc[0,"county"]
         state = geo_df.loc[0,"state"]  
 
-        self._make_triangulation()
+        # Initialize triangulation.
+        make_triangulation(geo_df)
         
         c = county.lower().split(" county")[0]
         s = state.lower()
         with open('../data/{}/{}/triangulation_dict.geojson'.format(s,c)) as f:
             tri_dict = geojson.load(f)
-        
-        # Select largest triangle.
+
         T = np.array([Polygon(t).area for t in tri_dict["geometry"]["coordinates"]])
         triangle_object = Polygon(tri_dict["geometry"]["coordinates"][T.argmax()])
 
         # Get boundary of triangle.
         bnd = list(triangle_object.boundary.coords)
+
+        gdf = gpd.GeoDataFrame(geometry = [triangle_object])
+
+        # Establish initial CRS
+        gdf.crs = "EPSG:3857"
+
+        # Set CRS to lat/lon
+        gdf = gdf.to_crs(epsg=4326) 
+
+        # Extract coordinates
+        co = list(gdf.loc[0,"geometry"].exterior.coords)
+        lon, lat = zip(*co)
+        pa = Proj(
+            "+proj=aea +lat_1=37.0 +lat_2=41.0 +lat_0=39.0 +lon_0=-106.55")
+        x, y = pa(lon, lat)
+        coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
+        area = shape(coord_proj).area / (10 ** 6) # area in km^2
         
         # If no number of people is given, use population density.
-        if num_points is None:
-            density = geo_df.loc[0,"population"] // (geo_df.loc[0,"area"] * 10e-7)
-            num_points = int(density * (530833043.467798 * 10e-7))
+        if num_agents is None:
+            density = geo_df.loc[0,"density"]
+            num_agents = int(area * density)
+
+            logging.info("\n Using population density to place {} agents.".format(
+                num_agents)) 
             
         # Get Vertices
         V1 = np.array(bnd[0])
@@ -297,31 +189,36 @@ class OpinionNetworkModel(ABC):
         V3 = np.array(bnd[2])
         
         # Sample from uniform distribution on [0,1]
-        U = np.random.uniform(0,1,num_points)
-        V = np.random.uniform(0,1,num_points)
+        U = np.random.uniform(0,1,num_agents)
+        V = np.random.uniform(0,1,num_agents)
         
         UU = np.where(U + V > 1, 1-U, U)
         VV = np.where(U + V > 1, 1-V, V) 
         
         # Shift triangle into origin and and place points.
-        points = (UU.reshape(len(UU),-1) * (V2 - V1).reshape(-1,2)) + (
+        agents = (UU.reshape(len(UU),-1) * (V2 - V1).reshape(-1,2)) + (
                                 VV.reshape(len(VV),-1) * (V3 - V1).reshape(-1,2))
         
         # Shift points back to original position.
-        points = points + V1.reshape(-1,2)
-        
-        return pd.DataFrame(points, columns = ["x","y"])
+        agents = agents + V1.reshape(-1,2)
+        agent_df = pd.DataFrame(agents, columns = ["x","y"])
+    
+        if show_plot == True:
+            plot_agents_on_triangle(triangle_object, agent_df)
 
-    def assign_weights_and_beliefs(self):
+        return agent_df
+
+    def assign_weights_and_beliefs(self, agent_df, show_plot = False):
         """ Assign weights and beliefs (i.e. modes) accoring to probabilities.
         
         Inputs: 
-
+            agent_df: (dataframe) xy-coordinates for agents.
+            show_plot: (bool) if true then plot is shown. 
             
         Returns: 
             Dataframe with xy-coordinates, beliefs, and weights for each point.
         """
-        belief_df = self.point_df.copy()
+        belief_df = agent_df.copy()
         power_law_exponent = self.power_law_exponent
         k = 1/(power_law_exponent - 1)
         modes = [i for i in range(self.n_modes)]
@@ -342,6 +239,10 @@ class OpinionNetworkModel(ABC):
 
         belief_df["x"] = (belief_df["x"] - x_offset) * .001
         belief_df["y"] = (belief_df["y"] - y_offset) * .001
+
+        if show_plot == True:
+            plot_agents_on_triangle_with_belief(belief_df)
+
         return belief_df
 
     def compute_probability_array(self, belief_df):
@@ -394,6 +295,7 @@ class OpinionNetworkModel(ABC):
         prob_df = prob_df.clip(upper = 1)
         
         prob_df = prob_df.replace(np.nan,0)
+
         return prob_df
 
     def compute_adjacency(self, prob_df):
@@ -402,6 +304,7 @@ class OpinionNetworkModel(ABC):
         Inputs: 
             prob_df: (dataframe) num_agents x num_agents dataframe giving  
                 probabiltiy of influce row n on column m.
+
         Outputs: 
             Dataframe where row n and column n is a 1 if n influces m, 
             and a 0 otherwise.
@@ -413,15 +316,16 @@ class OpinionNetworkModel(ABC):
         for i in prob_df.index:
             adj_idx = np.where(U[i] < prob_df.loc[i,:])[0]
             adjacency_df.loc[i,adj_idx] = 1
-                  
+
         return adjacency_df
 
     def compute_network_stats(self, adjacency_df):
         """ Return clustering coefficient and mean degree. 
         
         Inputs: 
-            adjacency_df: (dataframe) num_points x num_points dataframe, where 
+            adjacency_df: (dataframe) num_agents x num_agents dataframe, where 
                 a 1 in row n column m indicates that agent n influences agent m.
+
         Returns: 
             Tuple of clustering coefficient and mean degree of 
             the network.
@@ -440,19 +344,22 @@ class OpinionNetworkModel(ABC):
 
         
             cc += cc_i
-        clustering_coeff = cc / adjacency_df.shape[0]
-        
-        return clustering_coeff, np.mean(degrees)
+        clustering_coefficient = cc / adjacency_df.shape[0]
 
-    def connect_mega_influencers(self):
+        return clustering_coefficient, np.mean(degrees)
+
+    def connect_mega_influencers(self, belief_df):
         """ Returns mega_influencer reach dataframe
+
+        Inputs: 
+            belief_df: (dataframe) xy-coordinats, beliefs and weights of 
+                agents.
 
         Outputs: 
             Dataframe where rows are the keys of reach dict and columns
             are the index of belief_df, where a 1 in row n column m indicates
             that influencer n reaches agent m.
         """
-        belief_df = self.belief_df
         reach_dict = self.reach_dict
         mega_influencer_df = pd.DataFrame(0, index = [0,2], columns = list(
             belief_df.index))
@@ -470,11 +377,11 @@ class NetworkSimulation(ABC):
     """
     def __init__(self):
         self.model = None
-        self.iterations = None
+        self.phases = None
         self.results = []
         self.dynamic_belief_df = None
 
-    def run_simulation(self, model, phases):
+    def run_simulation(self, model, phases, show_plot = False):
 
         results = []
         self.model = model
@@ -483,6 +390,7 @@ class NetworkSimulation(ABC):
         df = pd.DataFrame(columns = [i for i in range(phases + 1)])
         df[0] = new_belief_df["belief"].values
 
+        self.phases = phases
         for i in range(phases):
             phase_dict = {}
             new_belief_df = self.one_dynamics_iteration(
@@ -498,9 +406,9 @@ class NetworkSimulation(ABC):
             new_adjacency_df = model.compute_adjacency(prob_df)
             new_adjacency_df.columns = [int(i) for i in new_adjacency_df.columns]
             phase_dict["adjacency_df"] = new_adjacency_df
-            clust_coeff, mean_deg = model.compute_network_stats(new_adjacency_df)
+            clust_coeff, mean_degree = model.compute_network_stats(new_adjacency_df)
             phase_dict["clust_coeff"] = clust_coeff
-            phase_dict["mean_deg"] = mean_deg
+            phase_dict["mean_degree"] = mean_degree
 
             results.append(phase_dict)
             df[i+1] = new_belief_df["belief"].values
@@ -508,7 +416,25 @@ class NetworkSimulation(ABC):
         self.results = results
         self.dynamic_belief_df = df
 
+        if show_plot == True:
+            self.plot_simulation_results()
+
         return None
+
+    def plot_simulation_results(self):
+        """ Return ridgeplot of simulation.
+        """
+        df = self.dynamic_belief_df
+        if df is None:
+            raise ValueError("It looks like the simulation hasn't been run yet.")
+        if self.phases < 5:
+            plot_phases = [t for t in range(self.phases +1)]
+        else:
+            t = self.phases // 5
+            plot_phases = [0] + [t * (i+1) for i in range(1,5)]
+        get_ridge_plot(df, plot_phases, reach_dict = self.model.reach_dict)
+        return None
+
 
     def one_dynamics_iteration(self, 
                         belief_df, 
@@ -564,73 +490,3 @@ class NetworkSimulation(ABC):
                 df_new.loc[i,"belief"] = new_belief
 
         return df_new
-
-
-############################
-#  Visualization Tools
-############################
-
-
-
-
-
-if __name__ == "__main__":
-
-    # Make relevant directories.
-    path = "../data/symmetric_simulations_60periods_1000_2/"
-    if os.path.exists(path) == False:
-        os.mkdir(path)
-
-    for r in [0,1,2,4,6,8,10]:
-        path = "../data/symmetric_simulations_60periods_1000_2/left_reach_{}/".format(r)
-        if os.path.exists(path) == False:
-            os.mkdir(path)
-    
-
-    methods = ["no_influencers","left_and_right_influencers"]
-
-    for method in methods:
-
-        logging.info("\n {} method initialized".format(method))
-
-        if method == "no_influencers":
-
-            path = "../data/symmetric_simulations_60periods_1000_2/left_reach_0/no_influencers/"
-            if os.path.exists(path) == False:
-                os.mkdir(path)
-
-            run_simulation(
-                    folder_name = path,
-                    state = "Alabama", 
-                    num_points = 1000,
-                    populate_community = True, 
-                    initialize_network = True,
-                    left_reach = 0,
-                    right_reach = 0,
-                    left_influence = 0,
-                    right_influence = 0,
-                    hk_phases = 60,
-                    runs = 1)
-
-        else:
-
-            for left_reach in [0,1,2,4,6,8,10]:
-
-                path = "../data/symmetric_simulations_60periods_1000_2/left_reach_{}/left_and_right_influencers/".format(left_reach)
-                if os.path.exists(path) == False:
-                    os.mkdir(path)
-
-                run_simulation(
-                        folder_name = path,
-                        state = "Alabama", 
-                        num_points = 1000,
-                        populate_community = False, 
-                        initialize_network = False,
-                        left_reach = left_reach/10,
-                        right_reach = .8,
-                        left_influence = 1.5,
-                        right_influence = 1.5,
-                        hk_phases = 60,
-                        runs = 1)
-
-        logging.info("\n {} complete.".format(method))
