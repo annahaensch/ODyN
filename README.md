@@ -10,7 +10,7 @@ This repository contains tools to simulate opinion dyamics related to Covid-19 v
 
 #### Load Geographic Data
 
-Load geo and vaccine hesitancy data for a specific county, such as Montgomery, AL. Eventualy counties will be populated by adding "agents" to triangles with a specified density. The reason we use triangles, is because this is a convenient way to decompose the polygonal region into manageable pieces that can be filled using a Poisson point process. In case it's helpful, we've also included a tool to visualize the triangulated county. 
+We begin by Loading geographic and vaccine hesitancy data for a specific county, such as Montgomery, AL. Eventualy counties will be populated by adding "agents" to triangles with a specified density.  We use triangles because this is a convenient way to decompose the polygonal region into manageable pieces that can be filled using a Poisson point process. In case it's helpful, we've included a tool to visualize the triangulated county. 
 
 ```
 from geolocations import *
