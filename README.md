@@ -24,7 +24,7 @@ County mapping data will include area, population estimates, mapping coordinates
 * 1 - *hesitant or unsure*
 * 2 - *strongly hesitant*
 
-These can be loaded directly from the `geo_df`.
+More information about the meaning of these modes can be found in the [ASPE Report of June 16th, 2021](https://aspe.hhs.gov/reports/vaccine-hesitancy-covid-19-state-county-local-estimates). These can be loaded directly from the `geo_df`.
 
 ```
 hesitancy_dict = get_hesitancy_dict(geo_df)
