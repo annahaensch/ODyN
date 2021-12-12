@@ -14,7 +14,7 @@ from pyproj import Proj
 from bs4 import BeautifulSoup
 import requests
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 def get_county_mapping_data(county = None, state = None):
     """ Return geodataframe with location data.

@@ -17,10 +17,10 @@ from bs4 import BeautifulSoup
 import requests
 from abc import ABC, abstractmethod
 
-from geolocations import *
-from visualizations import *
+from .geolocations import *
+from .visualizations import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 class OpinionNetworkModel(ABC):
     """ Abstract base class for network model """
