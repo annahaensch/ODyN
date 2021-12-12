@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
 from scipy import stats
 
-import sys
-sys.path.insert(1, '../src')
 from .geolocations import *
 
 COLORS = {"light_orange":"#E69F00",

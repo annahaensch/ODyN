@@ -1,7 +1,5 @@
 import unittest
 import numpy as np
-import sys
-sys.path.append('../src')
 
 import src as odyn
 

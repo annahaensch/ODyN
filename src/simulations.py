@@ -17,9 +17,6 @@ from bs4 import BeautifulSoup
 import requests
 from abc import ABC, abstractmethod
 
-import sys
-sys.path.append('../src')
-
 from .geolocations import *
 from .visualizations import *
 
