@@ -25,6 +25,7 @@ These can be loaded directlyfrom the `geo_df`.
 
 ```
 hesitancy_dict = get_hesitancy_dict(geo_df)
+probability = list(hesitancy_dict.values())
 ```
 
 #### Initialize Model
@@ -36,22 +37,33 @@ p = list(hesitancy_dict.values())
 
 # Load model object.
 model = OpinionNetworkModel(n_modes = 3, 
-                            probabilities = p
-                           )
+                            probabilities = p)
 ```
 there are also several default paramters that can be updated. More information about these parameters can be found in `simulations.py`. 
 
 #### Populate Model
 
-There are several options for populating the model with agents.  If we wish to add a fixed number of agents and a fixed density (e.g. we might wish to add 500 agents with the density of 109 pepple/km^2, which is the density of Montgomery County, AL). To do this, we can populate a model instance using the `num_agents` and `density` arguments.  This will return a region of variable size, which is populated as requested.
+There are several options for populating the model with agents.  The simplest option is to add a fixed number of agents without including a density parameter.  This will default to plotting the requested number of agents on a triangle with area equivalent to 1 km^2. 
+
 ```
 # Populate model.
-model.populate_model(num_agents = 500, density = geo_df.loc[0,"density"])
+model.populate_model(num_agents = 500)
 
 # Plot initial network.
 model.plot_initial_network()
 ```
 ![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
+
+Another option is to plot agents with attention to density.  In this case, the requested number of agents are plotted on a triangle with variable area, satisfying the density requirement. 
+
+```
+# Populate model.
+model.populate_model(num_agents = 500, 
+					density = geo_df.loc[0,"density"])
+
+# Plot initial network.
+model.plot_initial_network()
+```
 
 #### Run Simulation
 
