@@ -59,11 +59,14 @@ Another option is to plot agents with attention to density.  In this case, the r
 ```
 # Populate model.
 model.populate_model(num_agents = 500, 
-			density = geo_df.loc[0,"density"])
+		density = 200)
 
 # Plot initial network.
 model.plot_initial_network()
 ```
+![network_model_with_density.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model_with_density.png?raw=true)
+
+Notice that the clusering coefficient and mean degree are both smaller in the example where agents are plotted with density.  This is because 500 agents are plotted with a density of 200 agents/km^2 so they have greated distance between then, and are therefore less likely to be connected under the present model. 
 
 #### Run Simulation
 
