@@ -2,7 +2,7 @@
 
 ## Background
 
-This repository contains Opinion Dynamics Network (ODyN) model tools and data to simulate opinion dyamics related to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
+This repository contains Opinion Dynamics Network (ODyN) tools and data to simulate opinion dyamics on networks graphs relevant to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
 
 * *Link to come*
 
