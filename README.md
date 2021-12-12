@@ -33,16 +33,15 @@ probability = list(hesitancy_dict.values())
 
 #### Initialize Model
 
-A model can be initialized with 
+A model can be initialized by supplying only the list of probabilities for the desired modes. 
 ```
 from simulations import *
 p = list(hesitancy_dict.values())
 
 # Load model object.
-model = OpinionNetworkModel(n_modes = 3, 
-                            probabilities = p)
+model = OpinionNetworkModel(probabilities = p)
 ```
-there are also several default paramters that can be updated. More information about these parameters can be found in `simulations.py`. 
+There are many more default parameters that can be updated; more information about these parameters can be found in `simulations.py`. 
 
 #### Populate Model
 
