@@ -59,7 +59,7 @@ Another option is to plot agents with attention to density.  In this case, the r
 ```
 # Populate model.
 model.populate_model(num_agents = 500, 
-					density = geo_df.loc[0,"density"])
+			density = geo_df.loc[0,"density"])
 
 # Plot initial network.
 model.plot_initial_network()
