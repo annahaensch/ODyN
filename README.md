@@ -13,9 +13,10 @@ This repository contains Opinion Dynamics Network (ODyN) tools and data to simul
 We begin by Loading geographic and vaccine hesitancy data for a specific county, such as Montgomery, AL. Eventualy counties will be populated by adding "agents" to triangles with a specified density.  We use triangles because this is a convenient way to decompose the polygonal region into manageable pieces that can be filled using a Poisson point process. In case it's helpful, we've included a tool to visualize the triangulated county. 
 
 ```
-from geolocations import *
-geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
-plot_triangulated_county(geo_df)
+import src as odyn
+
+geo_df = odyn.get_county_mapping_data(county = "Montgomery", state = "AL")
+odyn.plot_triangulated_county(geo_df)
 ```
 ![al_triangulated.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/al_triangulated.png?raw=true)
 
@@ -27,7 +28,7 @@ County mapping data will include area, population estimates, mapping coordinates
 More information about the meaning of these modes can be found in the [ASPE Report of June 16th, 2021](https://aspe.hhs.gov/reports/vaccine-hesitancy-covid-19-state-county-local-estimates). Since it will be helpful in what follows, hesitancy rates can be loaded directly from the `geo_df` as a dictionary.
 
 ```
-hesitancy_dict = get_hesitancy_dict(geo_df)
+hesitancy_dict = odyn.get_hesitancy_dict(geo_df)
 probability = list(hesitancy_dict.values())
 ```
 
@@ -35,11 +36,10 @@ probability = list(hesitancy_dict.values())
 
 A model can be initialized by supplying only the list of probabilities for the desired modes. 
 ```
-from simulations import *
 p = list(hesitancy_dict.values())
 
 # Load model object.
-model = OpinionNetworkModel(probabilities = p)
+model = odyn.OpinionNetworkModel(probabilities = p)
 ```
 There are many more default parameters that can be updated; more information about these parameters can be found in `simulations.py`. 
 
@@ -75,7 +75,7 @@ Notice that the clusering coefficient and mean degree are both smaller in the ex
 Now we are ready to run a simulation on a model instance.  This is done by loading the simulator object and running the simulation.
 
 ```
-sim = NetworkSimulation()
+sim = odyn.NetworkSimulation()
 sim.run_simulation(model = model, phases = 60)
 sim.plot_simulation_results()
 ```
@@ -87,11 +87,9 @@ sim.plot_simulation_results()
 This repository also contains tools to visualize vaccine rates at the national and county level.  This can be done by loading `visualizations.py` in a Jupyter notebook.
 
 ```
-from visualizations import * 
+odyn.vaccine_trends_plot()
 
-vaccine_trends_plot()
-
-relative_vaccine_trends_plot()
+odyn.relative_vaccine_trends_plot()
 ```
 ![us_trends_absolute.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/us_trends_absolute.png?raw=true)
 
@@ -99,12 +97,12 @@ relative_vaccine_trends_plot()
 
 For county level data, this repository contains data for Montgomery County, AL and Multnomah County, OR, but additional data can also be downloaded directly from the CDC website by settting the optional `download_data` argument to `True` (Note: running the function with this argument will download the 160 MB dataset of all counties and therefore it might take a few minutes to run). 
 ```
-vaccine_trends_plot(county = "Multnomah", 
+odyn.vaccine_trends_plot(county = "Multnomah", 
 					state = "OR", 
 					show_us_current = True,
 					download_data = False)
 
-relative_vaccine_trends_plot(county = "Multnomah",
+odyn.relative_vaccine_trends_plot(county = "Multnomah",
 					state = "OR",
 					download_data = False)
 ```
