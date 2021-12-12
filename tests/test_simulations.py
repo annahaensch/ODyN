@@ -1,19 +1,21 @@
 import unittest
+import numpy as np
+import sys
+sys.path.append('../src')
 
-from src.geolocations import *
-from src.simulations import *
-from src.visualizations import *
+import src as odyn
 
 class TestSimulation(unittest.TestCase):
 
     def test_model(self):
-        geo_df = get_county_mapping_data(county = "Multnomah", state = "OR")
-        hesitancy_dict = get_hesitancy_dict(geo_df)
+
+        geo_df = odyn.get_county_mapping_data(county = "Multnomah", state = "OR")
+        hesitancy_dict = odyn.get_hesitancy_dict(geo_df)
         prob = list(hesitancy_dict.values())
         self.assertEqual(int(np.sum(prob)), 1)
 
         # Load Model.
-        model = OpinionNetworkModel(
+        model = odyn.OpinionNetworkModel(
                             probabilities = prob,
                             beta = 2.2,
                             alpha = 1.5
@@ -26,7 +28,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(model.belief_df.shape[0],5)
 
         # Run simulation.
-        sim = NetworkSimulation()
+        sim = odyn.NetworkSimulation()
         sim.run_simulation(model = model, phases = 2)
         self.assertEqual(int(sim.dynamic_belief_df.shape[1]),3)
 
