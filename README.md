@@ -1,8 +1,8 @@
-# ODyN
+# ODyN for Vaccine Hesitancy
 
 ## Background
 
-This repository contains tje Opinion Dynamics Network (ODyN) model to simulate opinion dyamics related to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
+This repository contains Opinion Dynamics Network (ODyN) model tools and data to simulate opinion dyamics related to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
 
 * *Link to come*
 
