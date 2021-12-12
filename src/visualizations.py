@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
 from scipy import stats
 
-from geolocations import *
+from .geolocations import *
 
 COLORS = {"light_orange":"#E69F00",
              "light_blue":"#56B4E9",
