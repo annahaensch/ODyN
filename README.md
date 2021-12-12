@@ -82,9 +82,11 @@ sim.plot_simulation_results()
 
 ## Vaccine Trend Visualizations
 
-To create visualizations for the national level data, use the following code from a jupyter notebook
+This repository also contains tools to visualize vaccine rates at the national and county level.  This can be done by loading `visualizations.py` in a Jupyter notebook.
 
 ```
+from visualizations import * 
+
 vaccine_trends_plot()
 
 relative_vaccine_trends_plot()
