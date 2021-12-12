@@ -6,7 +6,7 @@ This repository contains Opinion Dynamics Network (ODyN) tools and data to simul
 
 * *Link to come*
 
-## Simulations
+## Running Simulations with ODyN
 
 #### Load Geographic Data
 
