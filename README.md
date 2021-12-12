@@ -8,23 +8,26 @@ This repository contains tools to simulate opinion dyamics related to Covid-19 v
 
 ## Simulations
 
+#### Load Geographic Data
+
 To load geo and vaccine hesitancy data for a specific county, such as Montgomery, AL, begin with 
 
 ```
 from geolocations import *
-get_county_mapping_data(county = "Montgomery", state = "AL")
+geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
 ```
 This will return a geodataframe with area, population estimates, mapping coordinates, and vaccine hesitancy estimates for the county and state. Data for Montgomery, AL and Multnomah, OR has been preloaded so it will run quickly, other counties will download data directly from the [CDC website](https://data.cdc.gov/Vaccinations/Vaccine-Hesitancy-for-COVID-19-County-and-local-es/q9mh-h2tw), which might take a few minutes. From here we can read the probabilities of the three relevant modes
 * 0 - *not vaccine hesitant*
 * 1 - *hesitant or unsure*
 * 2 - *strongly hesitant*
 
-These can be loaded direction from the geo_df.
+These can be loaded directlyfrom the `geo_df`.
 
 ```
-geo_df = get_county_mapping_data(county = "Montgomery", state = "AL")
 hesitancy_dict = get_hesitancy_dict(geo_df)
 ```
+
+#### Initialize Model
 
 A model can be initialized with 
 ```
@@ -35,7 +38,13 @@ p = list(hesitancy_dict.values())
 model = OpinionNetworkModel(n_modes = 3, 
                             probabilities = p
                            )
+```
+there are also several default paramters that can be updated. More information about these parameters can be found in `simulations.py`. 
 
+#### Populate Model
+
+There are several options for populating the model with agents.  If we wish to add a fixed number of agents and a fixed density (e.g. we might wish to add 500 agents with the density of 109 pepple/km^2, which is the density of Montgomery County, AL). To do this, we can populate a model instance using the `num_agents` and `density` arguments.  This will return a region of variable size, which is populated as requested.
+```
 # Populate model.
 model.populate_model(num_agents = 500, density = geo_df.loc[0,"density"])
 
@@ -43,6 +52,8 @@ model.populate_model(num_agents = 500, density = geo_df.loc[0,"density"])
 model.plot_initial_network()
 ```
 ![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
+
+#### Run Simulation
 
 Now we are ready to run a simulation on a model instance.  This is done by loading the simulator object and running the simulation.
 
