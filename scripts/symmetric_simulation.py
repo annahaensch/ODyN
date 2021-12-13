@@ -25,8 +25,8 @@ def main():
 
     model = odyn.OpinionNetworkModel(
                                 probabilities = [.45,.1,.45],
-                                delta = 36,
-                                beta = 2.5,
+                                delta = 5,
+                                beta = 1.7,
                                 include_weight = True,
                                 include_opinion = True,
                                )
