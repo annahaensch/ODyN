@@ -1,5 +1,7 @@
 # ODyN for Vaccine Hesitancy
 
+![ODyN.jpeg](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ODyN.jpeg?raw=true)
+
 ## Background
 
 This repository contains Opinion Dynamics Network (ODyN) tools and data to simulate opinion dyamics on networks graphs relevant to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
