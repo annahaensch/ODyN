@@ -40,7 +40,7 @@ def load_national_trend_data():
     df.set_index("Date", drop = True, inplace = True)
     return df
 
-def load_county_data(county, state, download_data= False):
+def load_county_trend_data(county, state, download_data= False):
     """ Returns dataframe of county level vaccine trends.
 
     Inputs: 
@@ -210,7 +210,7 @@ def vaccine_trends_plot(county = None,
 
             c = county.lower().split(" county")[0]
             s = state.upper()
-            df = load_county_data(county = c, state = s, 
+            df = load_county_trend_data(county = c, state = s, 
                 download_data = download_data)
         
             complete = county_complete_pct(df)
@@ -278,7 +278,7 @@ def relative_vaccine_trends_plot(county = None,
         if state:
             c = county.lower().split(" county")[0]
             s = state.upper()
-            df = load_county_data(county = c, state = s, 
+            df = load_county_trend_data(county = c, state = s, 
                 download_data = download_data)
         
             complete = county_complete_pct(df)
