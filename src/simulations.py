@@ -252,7 +252,7 @@ class OpinionNetworkModel(ABC):
                                                     ) for j in belief_df.index]
         
         # Compute the dimensionless distance metric.
-        lam = 1/prob_df.max().max()
+        lam = 1/(prob_df.max().max()/10)
         prob_df = (1 + (lam*prob_df))
         prob_df = prob_df.replace(0,np.nan)
         prob_df = prob_df ** ( -1 * delta)
@@ -315,7 +315,7 @@ class OpinionNetworkModel(ABC):
         cc = 0
         degrees = []
         for i in adjacency_df.index:
-            nbhd = np.where(adjacency_df.loc[i,:] != 0)[0]
+            nbhd = np.where(adjacency_df.loc[:,i] != 0)[0]
             deg = len(nbhd)
             degrees.append(deg)
             cc_i = 0
