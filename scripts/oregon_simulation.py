@@ -6,12 +6,21 @@ sys.path.append('..')
 import src as odyn
 import logging
 import pandas as pd
+import os
 
 logging.basicConfig(level=logging.INFO)
 
 def main():
 
-    logging.info("Loading AL geographic data.")
+    # Make directory if it doesn't exist.
+    isdir = os.path.isdir("../data/or")
+    if isdir == False:
+        os.mkdir("../data/or")
+    isdir = os.path.isdir("../data/or/multnomah")
+    if isdir == False:
+        os.mkdir("../data/or/multnomah")
+
+    logging.info("Loading OR geographic data.")
 
     # Load geographic data
     geo_df = odyn.get_county_mapping_data(county = "Multnomah", state = "OR")
@@ -28,7 +37,7 @@ def main():
 
     model.populate_model(num_agents = 1000, 
                             show_plot = False)
-    initial_belief_df = mode.belief_df.copy()
+    initial_belief_df = model.belief_df.copy()
 
     # Save population data.
     model.agent_df.to_parquet("../data/or/multnomah/agent_df.pq")
@@ -37,8 +46,6 @@ def main():
     model.adjacency_df.to_csv("../data/or/multnomah/adjacency_df.csv")
 
     logging.info("\n Model Loaded.")
-
-    reaches = [0,2,4,6,8,10]
 
     # Run simulations for no influencers.
     logging.info("\n Running simulation for no influencers.")
@@ -53,7 +60,8 @@ def main():
     sim.dynamic_belief_df.to_csv(
         "../data/or/multnomah/simulation_results_none.csv")
 
-    # Run simulations for left reach 0,.2,.4,.6,.8,1. with right reach .8.
+    ## Run simulations for variable left reach with right reach .8.
+    reaches = [0,2,4,6,8,10]
     for i in range(len(reaches)):
         r = reaches[i]
 

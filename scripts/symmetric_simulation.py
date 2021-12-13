@@ -1,4 +1,4 @@
-""" Run Full Alabama Simulations.
+""" Run Symmetric Simulations.
 """
 import sys
 sys.path.append('..')
@@ -8,27 +8,23 @@ import logging
 import pandas as pd
 import os
 
-logging.basicConfig(level=logging.info)
+logging.basicConfig(level=logging.INFO)
 
 def main():
 
     # Make directory if it doesn't exist.
-    isdir = os.path.isdir("../data/al")
+    isdir = os.path.isdir("../data/sym")
     if isdir == False:
-        os.mkdir("../data/al")
-    isdir = os.path.isdir("../data/al/montgomery")
+        os.mkdir("../data/sym")
+    isdir = os.path.isdir("../data/sym/no_name_county")
     if isdir == False:
-        os.mkdir("../data/al/montgomery")
+        os.mkdir("../data/sym/no_name_county")
 
-    logging.info("Loading AL geographic data.")
+    logging.info("Loading SYM geographic data.")
 
-    # Load geographic data
-    geo_df = odyn.get_county_mapping_data(county = "Montgomery", state = "AL")
-    hesitancy_dict = odyn.get_hesitancy_dict(geo_df)
-    prob = list(hesitancy_dict.values())
 
     model = odyn.OpinionNetworkModel(
-                                probabilities = prob,
+                                probabilities = [.45,.1,.45],
                                 delta = 36,
                                 beta = 2.5,
                                 include_weight = True,
@@ -40,13 +36,14 @@ def main():
     initial_belief_df = model.belief_df.copy()
 
     # Save population data.
-    model.agent_df.to_parquet("../data/al/montgomery/agent_df.pq")
-    model.belief_df.to_parquet("../data/al/montgomery/belief_df.pq")
-    model.prob_df.to_csv("../data/al/montgomery/prob_df.csv")
-    model.adjacency_df.to_csv("../data/al/montgomery/adjacency_df.csv")
+    model.agent_df.to_parquet("../data/sym/no_name_county/agent_df.pq")
+    model.belief_df.to_parquet("../data/sym/no_name_county/belief_df.pq")
+    model.prob_df.to_csv("../data/sym/no_name_county/prob_df.csv")
+    model.adjacency_df.to_csv("../data/sym/no_name_county/adjacency_df.csv")
 
     logging.info("\n Model Loaded.")
 
+    
     # Run simulations for no influencers.
     logging.info("\n Running simulation for no influencers.")
     
@@ -58,9 +55,9 @@ def main():
     sim = odyn.NetworkSimulation()
     sim.run_simulation(model = model, phases = 60)
     sim.dynamic_belief_df.to_csv(
-        "../data/al/montgomery/simulation_results_none.csv")
+        "../data/sym/no_name_county/simulation_results_none.csv")
 
-    # Run simulations for variable left reach with right reach .8.
+    # Run simulations for left reach 0,.2,.4,.6,.8,1. with right reach .8.
     reaches = [0,2,4,6,8,10]
     for i in range(len(reaches)):
         r = reaches[i]
@@ -73,9 +70,9 @@ def main():
         model.mega_influencer_df = mega_influencer_df
 
         sim = odyn.NetworkSimulation()
-        sim.run_simulation(model = model, phases = 60)
+        sim.run_simulation(model = model, phases = 60, store_results = False)
         sim.dynamic_belief_df.to_csv(
-            "../data/al/montgomery/simulation_results_{}.csv".format(r))
+            "../data/sym/no_name_county/simulation_results_{}.csv".format(r))
 
     return None
 
