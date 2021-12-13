@@ -13,8 +13,36 @@ from pyproj import Proj
 
 from bs4 import BeautifulSoup
 import requests
+import us
 
 logging.basicConfig(level=logging.WARNING)
+
+def load_county_hesitancy_data(county = None, state = None, download_data = False):
+    """ Return geodataframe with hesitancy data.
+
+    Inputs:
+        county: (str) Capitalized county name, or None.
+        state: (str) Uppercase two-letter state name abbreviation, or None.
+        download_dada: (bool) if True downloads data from CDC.
+
+    Returns: 
+        Single row dataframe with hesitancy estimates for CDC week 31.
+    """
+    full_state_name = us.states.lookup(state).name
+    county = county.lower().split(" county")[0]
+
+    if download_data == False:
+        hesitancy_df = pd.read_csv(
+            "../data/{}_county_{}_hesitancy.csv".format(
+            county.lower(), state.lower()), index_col = 0)
+
+    else:
+        hesitancy_df = pd.read_csv(
+            "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
+        hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
+                        county.capitalize(), full_state_name.capitalize())]
+
+    return hesitancy_df
 
 def get_county_mapping_data(county = None, state = None):
     """ Return geodataframe with location data.
@@ -94,15 +122,14 @@ def get_county_mapping_data(county = None, state = None):
 
     # Load vaccine hesitancy data.
     try: 
-        hesitancy_df = pd.read_csv(
-            "../data/{}_county_{}_hesitancy.csv".format(
-            county.lower(), state.lower()), index_col = 0)
+        hesitancy_df = load_county_hesitancy_data(county = county, 
+                                                state = state, 
+                                                download_data = False)
 
     except:
-        hesitancy_df = pd.read_csv(
-            "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
-        hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
-                        county.capitalize(), full_state_name.capitalize())]
+        hesitancy_df = load_county_hesitancy_data(county = county, 
+                                                state = state, 
+                                                download_data = True)
 
     geo_df["strongly_hesitant"] = hesitancy_df[
                     "Estimated strongly hesitant"].iloc[0]
