@@ -81,6 +81,12 @@ sim.plot_simulation_results()
 ```
 ![ridge_plot.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ridge_plot.png?raw=true)
 
+Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  From the top level directory, run the following
+```
+>cd scripts
+>python alabama_simulation.py
+```
+to produce simulation results for Montgomery County, Alabama.
 
 ## Vaccine Trend Visualizations
 
