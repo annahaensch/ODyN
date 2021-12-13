@@ -29,8 +29,8 @@ class OpinionNetworkModel(ABC):
                 probabilities = [.45,.1,.45], 
                 power_law_exponent = 2.5,
                 openmindedness = 1.5,
-                alpha = 1.6, 
-                beta = 3,
+                beta = 1.6, 
+                delta = 3,
                 include_opinion = True,
                 include_weight = True,
                 reach_dict = {0:.8,2:.8},
@@ -44,8 +44,8 @@ class OpinionNetworkModel(ABC):
             probabilities: (list) probabilities of each mode.
             power_law_exponent: (float) exponent of power law
             openmindedness: (float) inter-mode distanct that agents influence.
-            alpha: (float) Scaling factor for weight and distance, > 1.
-            beta: (float) Scaling factor for distance, > 0.
+            beta: (float) Scaling factor for weight and distance, > 1.
+            delta: (float) Scaling factor for distance, > 0.
             include_opinion: (boolean) If True, include distance in opinion space 
                 in the probability measure.
             include_weight: (boolean) If True, include influencer weight in the 
@@ -63,8 +63,8 @@ class OpinionNetworkModel(ABC):
         self.probabilities = probabilities
         self.power_law_exponent = power_law_exponent
         self.openmindedness = openmindedness
-        self.alpha = alpha
         self.beta = beta
+        self.delta = delta
         self.include_opinion = include_opinion
         self.include_weight = include_weight
         self.reach_dict = reach_dict
@@ -217,15 +217,6 @@ class OpinionNetworkModel(ABC):
                                 p = self.probabilities)
         belief_df["decile"] = pd.qcut(belief_df["weight"], q = 100, labels = [
                                 i for i in range(1,101)])
-        
-        # Move top influencer toward the center.
-        top_influencer = belief_df[belief_df["weight"] == belief_df["weight"].max()
-                                        ].index[0]
-        x_offset = belief_df.loc[top_influencer,"x"]
-        y_offset = belief_df.loc[top_influencer,"y"]
-
-        belief_df["x"] = (belief_df["x"] - x_offset) * .001
-        belief_df["y"] = (belief_df["y"] - y_offset) * .001
 
         if show_plot == True:
             plot_agents_on_triangle_with_belief(belief_df)
@@ -234,7 +225,7 @@ class OpinionNetworkModel(ABC):
 
     def compute_probability_array(self, belief_df):
         """ Return dataframe of probability that row n influences column m.
-        
+
         Inputs: 
             belief_df: (dataframe) xy-coordinats, beliefs and weights of 
                 agents.
@@ -244,8 +235,8 @@ class OpinionNetworkModel(ABC):
             in row n column m.
         """
         openmindedness = self.openmindedness
-        alpha = self.alpha
         beta = self.beta
+        delta = self.delta
         include_opinion = self.include_opinion
         include_weight = self.include_weight
 
@@ -259,28 +250,32 @@ class OpinionNetworkModel(ABC):
             prob_df.loc[i,:] = [point_i.distance(Point(belief_df.loc[j,"x"],
                                                        belief_df.loc[j,"y"])
                                                     ) for j in belief_df.index]
-            
+        
+        # Compute the dimensionless distance metric.
+        lam = 1/prob_df.max().max()
+        prob_df = (1 + (lam*prob_df))
+        prob_df = prob_df.replace(0,np.nan)
+        prob_df = prob_df ** ( -1 * delta)
 
-            # Only allow connections to people close enough in opinion space.
-            if include_opinion:
+        # Only allow connections to people close enough in opinion space.
+        if include_opinion == True:
+            for i in belief_df.index:
                 current_belief = belief_df.loc[i,"belief"]
                 opinion_diff = np.where(np.abs(belief_df["belief"] - current_belief
                                                         ) > openmindedness,0, 1)
                 prob_df.loc[i,:] = opinion_diff * prob_df.loc[i,:]
+        
 
-        # Replace 0 with np.nan to avoid divbyzero error.
-        prob_df = prob_df.replace(0,np.nan) ** (-beta)    
-        
         # Multiply rows by normalized weight factor.
-        if include_weight:
-            prob_df = prob_df.mul((belief_df["weight"]/belief_df["weight"].sum()), axis = 0)
-        
-        # Raise to alpha.
-        prob_df = prob_df ** alpha
-        
+        if include_weight == True:
+            prob_df = prob_df.mul((belief_df["weight"]), axis = 0)
+
+        # Raise to beta.
+        prob_df = prob_df ** beta
+
         # Make sure probabilities don't exceed 1.
         prob_df = prob_df.clip(upper = 1)
-        
+
         prob_df = prob_df.replace(np.nan,0)
 
         return prob_df
@@ -368,7 +363,19 @@ class NetworkSimulation(ABC):
         self.results = []
         self.dynamic_belief_df = None
 
-    def run_simulation(self, model, phases, show_plot = False):
+    def run_simulation(self, model, phases, show_plot = False, store_results = False):
+        """ Carry out simulation.
+
+        Inputs: 
+            model: OpinionNetworkModel instance.
+            phases: (int) number of phases of simulation to carry out.
+            show_plot: (bool) if true, shows ridge plot.
+            store_results: (bool) if True, stores results for all phases, if False
+                then only updating beliefs are stored.
+
+        Outputs: 
+            Complete simulation.
+        """
 
         results = []
         self.model = model
@@ -400,11 +407,12 @@ class NetworkSimulation(ABC):
             results.append(phase_dict)
             df[i+1] = new_belief_df["belief"].values
 
-        self.results = results
         self.dynamic_belief_df = df
 
         if show_plot == True:
             self.plot_simulation_results()
+        if store_results == True:
+            self.results = results
 
         return None
 
