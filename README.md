@@ -133,3 +133,10 @@ Centers for Disease Control and Prevention. *COVID-19 Vaccinations in the United
 #### County Level Hesitancy Estimates
 
 Centers for Disease Control and Prevention. *Vaccine Hesitancy for COVID-19: County and local estimates*. [https://data.cdc.gov/Vaccinations/Vaccine-Hesitancy-for-COVID-19-County-and-local-es/q9mh-h2tw](https://data.cdc.gov/Vaccinations/Vaccine-Hesitancy-for-COVID-19-County-and-local-es/q9mh-h2tw). Last Accessed: December 8, 2021.
+
+## Unit Tests
+
+To run unit tests run the following from the top level directory.
+```
+> python -m unittest tests/test_simulations.py
+```
