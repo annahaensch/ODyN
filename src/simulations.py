@@ -479,7 +479,6 @@ class NetworkSimulation(ABC):
                         else:
                             u = np.random.uniform(0,1)
                             if u < self.model.reach_dict[0]:
-                                print("I've changed, get me vaccinated!")
                                 new_mega_influencer_df.loc[2,i] == 0
                                 new_mega_influencer_df.loc[0,i] == 1
 
@@ -496,7 +495,6 @@ class NetworkSimulation(ABC):
                         else:
                             u = np.random.uniform(0,1)
                             if u < self.model.reach_dict[2]:
-                                print("I've changed, Qanon is real!")
                                 new_mega_influencer_df.loc[0,i] == 0
                                 new_mega_influencer_df.loc[2,i] == 1
                     
