@@ -322,7 +322,7 @@ class OpinionNetworkModel(ABC):
             if deg > 2:
                 C = list(itertools.permutations(nbhd,2))
                 cc_i = np.sum([int(adjacency_df.loc[c[0],c[1]] > 0) for c in C]
-                                                    ) / math.comb(deg,2)
+                                                    ) / math.perm(deg,2)
 
         
             cc += cc_i
