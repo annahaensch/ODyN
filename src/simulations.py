@@ -320,9 +320,9 @@ class OpinionNetworkModel(ABC):
             degrees.append(deg)
             cc_i = 0
             if deg > 2:
-                C = list(itertools.combinations(nbhd,2))
+                C = list(itertools.permutations(nbhd,2))
                 cc_i = np.sum([int(adjacency_df.loc[c[0],c[1]] > 0) for c in C]
-                                                    ) / math.comb(deg,2)
+                                                    ) / math.perm(deg,2)
 
         
             cc += cc_i
@@ -379,21 +379,23 @@ class NetworkSimulation(ABC):
 
         results = []
         self.model = model
-        new_belief_df = model.belief_df
-        new_adjacency_df = model.adjacency_df
+        new_belief_df = model.belief_df.copy()
+        new_adjacency_df = model.adjacency_df.copy()
+        new_mega_influencer_df = model.mega_influencer_df.copy()
+
         df = pd.DataFrame(columns = [i for i in range(phases + 1)])
         df[0] = new_belief_df["belief"].values
 
         self.phases = phases
         for i in range(phases):
             phase_dict = {}
-            new_belief_df = self.one_dynamics_iteration(
-                belief_df = new_belief_df,
-                adjacency_df = new_adjacency_df,
-                right_openmindedness = model.right_openmindedness, 
-                left_openmindedness = model.left_openmindedness,
-                mega_influencer_df = model.mega_influencer_df, 
-                threshold = model.threshold)
+            new_belief_df, new_mega_influencer_df = self.one_dynamics_iteration(
+                            belief_df = new_belief_df,
+                            adjacency_df = new_adjacency_df,
+                            right_openmindedness = model.right_openmindedness, 
+                            left_openmindedness = model.left_openmindedness,
+                            mega_influencer_df = new_mega_influencer_df, 
+                            threshold = model.threshold)
 
             phase_dict["belief_df"] = new_belief_df
             prob_df = model.compute_probability_array(new_belief_df)
@@ -452,7 +454,8 @@ class NetworkSimulation(ABC):
             Updated belief_df after one round of Hegselmann-Krause.
         """
         df_new = belief_df.copy()
-            
+        new_mega_influencer_df = mega_influencer_df.copy()
+
         for i in belief_df.index:
             current_belief = belief_df.loc[belief_df.index[i], "belief"]
 
@@ -471,6 +474,14 @@ class NetworkSimulation(ABC):
                         if np.abs(current_belief - 2) <= right_openmindedness:
                             n_edges = n_edges + 1
                             new_belief = new_belief + 2
+                        # If not, flip a biased coint to decide if my influencer connection
+                        # changes affiliation.
+                        else:
+                            u = np.random.uniform(0,1)
+                            if u < self.model.reach_dict[0]:
+                                new_mega_influencer_df.loc[2,i] == 0
+                                new_mega_influencer_df.loc[0,i] == 1
+
                         
                 if left_openmindedness > 0:
                     # Am  I connected to them?
@@ -479,9 +490,16 @@ class NetworkSimulation(ABC):
                         if np.abs(current_belief  - 0) <= left_openmindedness:
                             n_edges = n_edges + 1
                             new_belief = new_belief + 0
+                        # If not, flip a biased coint to decide if my influencer connection
+                        # changes affiliation.
+                        else:
+                            u = np.random.uniform(0,1)
+                            if u < self.model.reach_dict[2]:
+                                new_mega_influencer_df.loc[0,i] == 0
+                                new_mega_influencer_df.loc[2,i] == 1
                     
                 new_belief = new_belief / (n_edges + 1)
 
                 df_new.loc[i,"belief"] = new_belief
 
-        return df_new
+        return df_new, new_mega_influencer_df
