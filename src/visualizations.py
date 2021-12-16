@@ -189,8 +189,8 @@ def vaccine_trends_plot(county = None,
     # Add horizontal line at current completely vaccinated.
     if show_us_current == True:
         y = df.index[-1].year
-        m = df.index[-1].month
-        d = df.index[-1].day
+        m = f"{df.index[-1].month:02}"
+        d = f"{df.index[-1].day:02}"
         ax.plot((one_dose.index[0], one_dose.index[-1]),
                 (complete.iloc[-1],complete.iloc[-1]), 
                 color = "k", 
