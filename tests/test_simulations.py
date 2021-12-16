@@ -15,8 +15,8 @@ class TestSimulation(unittest.TestCase):
         # Load Model.
         model = odyn.OpinionNetworkModel(
                             probabilities = prob,
-                            delta = 5,
-                            beta = 2.5,
+                            importance_of_weight = 5,
+                            importance_of_distance = 2.5,
                            )
         self.assertTrue(model.include_opinion)
         self.assertTrue(model.include_weight)
