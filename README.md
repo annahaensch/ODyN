@@ -86,7 +86,7 @@ sim.plot_simulation_results()
 Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  or example, from the top level directory, run the following
 ```
 > cd scripts
-> python alabama_simulation.py
+> python skewed_simulation.py
 ```
 to produce simulation results for Montgomery County, Alabama.
 
