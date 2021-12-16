@@ -27,10 +27,10 @@ class OpinionNetworkModel(ABC):
         
     def __init__(self, 
                 probabilities = [.45,.1,.45], 
-                power_law_exponent = 2.5,
+                power_law_exponent = 1.5,
                 openmindedness = 1.5,
-                beta = 1.6, 
-                delta = 3,
+                beta = 1.7, 
+                delta = 5,
                 include_opinion = True,
                 include_weight = True,
                 reach_dict = {0:.8,2:.8},
@@ -42,7 +42,8 @@ class OpinionNetworkModel(ABC):
             
         Inputs:
             probabilities: (list) probabilities of each mode.
-            power_law_exponent: (float) exponent of power law
+            power_law_exponent: (float) exponent of power law, must be > 0; 
+            	this is gamma from [1].
             openmindedness: (float) inter-mode distanct that agents influence.
             beta: (float) Scaling factor for weight and distance, > 1.
             delta: (float) Scaling factor for distance, > 0.
@@ -207,12 +208,12 @@ class OpinionNetworkModel(ABC):
         """
         belief_df = agent_df.copy()
         power_law_exponent = self.power_law_exponent
-        k = 1/(power_law_exponent - 1)
+        k = -1/(power_law_exponent)
         modes = [i for i in range(len(self.probabilities))]
         
         assert np.sum(np.array(self.probabilities)) == 1, "Probabilities must sum to 1."
         
-        belief_df["weight"] = np.random.uniform(0,1,belief_df.shape[0]) ** (-k)
+        belief_df["weight"] = np.random.uniform(0,1,belief_df.shape[0]) ** (k)
         belief_df["belief"] = np.random.choice(modes, belief_df.shape[0], 
                                 p = self.probabilities)
         belief_df["decile"] = pd.qcut(belief_df["weight"], q = 100, labels = [
