@@ -28,34 +28,45 @@ class OpinionNetworkModel(ABC):
     def __init__(self, 
                 probabilities = [.45,.1,.45], 
                 power_law_exponent = 1.5,
-                openmindedness = 1.5,
-                beta = 1.7, 
-                delta = 5,
+                openness_to_neighbors = 1.5,
+                openness_to_influencers = 1.5,
+                distance_scaling_factor = 1/10,
+                importance_of_weight = 1.7, 
+                importance_of_distance = 3.3,
                 include_opinion = True,
                 include_weight = True,
-                reach_dict = {0:.8,2:.8},
-                left_openmindedness = 1.5,
-                right_openmindedness = 1.5,
+                left_reach = 0.8,
+                right_reach = 0.8,
                 threshold = -1
                 ):
         """Returns initialized OpinionNetworkModel.
             
         Inputs:
-            probabilities: (list) probabilities of each mode.
+            probabilities: (list) probabilities of each mode; these are the 
+                values "p_0,p_1,p_2" from [1].
             power_law_exponent: (float) exponent of power law, must be > 0; 
-            	this is gamma from [1].
-            openmindedness: (float) inter-mode distanct that agents influence.
-            beta: (float) Scaling factor for weight and distance, > 1.
-            delta: (float) Scaling factor for distance, > 0.
+                this is "gamma" from [1].
+            openness_to_neighbors: (float) maximum inter-mode distance that agents
+                can influence; this is "b" from [1].
+            openness_to_influencers: (float) distance in opinion space that 
+                mega-influencers can reach; this is "epsilon" from [1].
+            distance_scaling_factor: (float) Scale distancy by this amount, must 
+                be >0; this is "lambda" from [1].
+            importance_of_weight: (float) Raise weights to this power, must be > 0; 
+                this is "alpha" from [1].
+            importance_of_distance: (float) Raise adjusted distance to this power,
+                must be > 0; this is "delta" from [1].
             include_opinion: (boolean) If True, include distance in opinion space 
                 in the probability measure.
             include_weight: (boolean) If True, include influencer weight in the 
                 probability measure.
-            reach_dict: (dictionary) value is propotional reach of key.
-            left_openmindedness: (float) distance in opinion space that left 
-                mega-influencers can reach.
-            right_openmindedness: (float) distance in opinion space that right 
-                mega-influencers can reach.
+            left_reach: (float) this is the proportion of the susceptible population 
+                that the left mega-influencers will actually reach, must be between
+                0 and 1; this is p_L from [1] 
+            right_reach: (float) this is the proportion of the susceptible population 
+                that the right mega-influencers will actually reach, must be between
+                0 and 1; this is p_R from [1] 
+
             threshold: (int) value below which opinions no longer change.
 
         Outputs: 
@@ -63,14 +74,15 @@ class OpinionNetworkModel(ABC):
         """
         self.probabilities = probabilities
         self.power_law_exponent = power_law_exponent
-        self.openmindedness = openmindedness
-        self.beta = beta
-        self.delta = delta
+        self.openness_to_neighbors = openness_to_neighbors
+        self.openness_to_influencers = openness_to_influencers
+        self.distance_scaling_factor = distance_scaling_factor
+        self.importance_of_weight = importance_of_weight
+        self.importance_of_distance = importance_of_distance
         self.include_opinion = include_opinion
         self.include_weight = include_weight
-        self.reach_dict = reach_dict
-        self.left_openmindedness = left_openmindedness
-        self.right_openmindedness = right_openmindedness
+        self.left_reach = left_reach
+        self.right_reach = right_reach
         self.threshold = threshold
 
         self.agent_df = None
@@ -224,6 +236,7 @@ class OpinionNetworkModel(ABC):
 
         return belief_df
 
+
     def compute_probability_array(self, belief_df):
         """ Return dataframe of probability that row n influences column m.
 
@@ -235,48 +248,53 @@ class OpinionNetworkModel(ABC):
             Dataframe with the probability that agent n influces agent m 
             in row n column m.
         """
-        openmindedness = self.openmindedness
-        beta = self.beta
-        delta = self.delta
-        include_opinion = self.include_opinion
-        include_weight = self.include_weight
-
-        prob_df = pd.DataFrame(index = belief_df.index, columns = belief_df.index)
-
-        # Compute squared distance from point i as row. 
-        for i in belief_df.index:
+        n = belief_df.index.shape[0]
+        prob_array = np.ones((n,n))
+        
+        dist_array = np.zeros((n,n)) 
+        for i in range(n):
             point_i = Point(belief_df.loc[i,"x"],belief_df.loc[i,"y"])
 
-            # Set distance from i to i as np.nan.
-            prob_df.loc[i,:] = [point_i.distance(Point(belief_df.loc[j,"x"],
+            # Get distances from i to each other point.
+            dist_array[i,:] = [point_i.distance(Point(belief_df.loc[j,"x"],
                                                        belief_df.loc[j,"y"])
                                                     ) for j in belief_df.index]
-        
+            
         # Compute the dimensionless distance metric.
-        lam = 1/(prob_df.max().max()/10)
-        prob_df = (1 + (lam*prob_df))
-        prob_df = prob_df.replace(0,np.nan)
-        prob_df = prob_df ** ( -1 * delta)
-
-        # Only allow connections to people close enough in opinion space.
-        if include_opinion == True:
-            for i in belief_df.index:
-                current_belief = belief_df.loc[i,"belief"]
-                opinion_diff = np.where(np.abs(belief_df["belief"] - current_belief
-                                                        ) > openmindedness,0, 1)
-                prob_df.loc[i,:] = opinion_diff * prob_df.loc[i,:]
+        diam = dist_array.max().max()
+        lam = (self.distance_scaling_factor * diam)
+        delta = -1 * self.importance_of_distance
         
+        dist_array = np.where(dist_array == 0,np.nan, dist_array)
+        dist_array = (1 + (dist_array/lam)) ** delta
+        
+        prob_array = prob_array * dist_array 
+        
+        # Only allow connections to people close in opinion space.
+        if self.include_opinion == True:
+            op_array = np.zeros((n,n))
+            # If row i connects to column j, that means person i is
+            # influencing person j.  This can only happen if j is 
+            # already sufficiently close to person i in opinion space.
+            for i in range(n):
+                i_current_belief = belief_df.loc[i,"belief"]
+                opinion_diff = np.where(
+                    np.abs(belief_df["belief"] - i_current_belief
+                        ) > self.openness_to_neighbors,0, 1)
+                op_array[i,:] = opinion_diff
+                
+            prob_array = prob_array * op_array
 
-        # Multiply rows by normalized weight factor.
-        if include_weight == True:
-            prob_df = prob_df.mul((belief_df["weight"]), axis = 0)
 
-        # Raise to beta.
-        prob_df = prob_df ** beta
+        # Incentivize connections with heavily weighted people.
+        if self.include_weight == True:
+            wt_array = belief_df["weight"] ** self.importance_of_weight
+            wt_array = wt_array.values.reshape(-1,1)
+            
+            prob_array = prob_array * wt_array
 
-        # Make sure probabilities don't exceed 1.
+        prob_df = pd.DataFrame(prob_array)
         prob_df = prob_df.clip(upper = 1)
-
         prob_df = prob_df.replace(np.nan,0)
 
         return prob_df
@@ -294,11 +312,8 @@ class OpinionNetworkModel(ABC):
         """
         adjacency_df = pd.DataFrame(0,index = [int(i) for i in prob_df.index], 
             columns = [int(i) for i in prob_df.columns])
-        U = np.random.uniform(0,1,(prob_df.shape[0],prob_df.shape[1]))
-        
-        for i in prob_df.index:
-            adj_idx = np.where(U[i] < prob_df.loc[i,:])[0]
-            adjacency_df.loc[i,adj_idx] = 1
+        U = np.random.uniform(0,1,(prob_df.shape[0], prob_df.shape[1]))
+        adjacency_df = pd.DataFrame(np.where(U< prob_df.values,1,0))
 
         return adjacency_df
 
@@ -343,7 +358,7 @@ class OpinionNetworkModel(ABC):
             are the index of belief_df, where a 1 in row n column m indicates
             that influencer n reaches agent m.
         """
-        reach_dict = self.reach_dict
+        reach_dict = {0:self.left_reach, 2:self.right_reach}
         mega_influencer_df = pd.DataFrame(0, index = [0,2], columns = list(
             belief_df.index))
         
@@ -393,8 +408,7 @@ class NetworkSimulation(ABC):
             new_belief_df, new_mega_influencer_df = self.one_dynamics_iteration(
                             belief_df = new_belief_df,
                             adjacency_df = new_adjacency_df,
-                            right_openmindedness = model.right_openmindedness, 
-                            left_openmindedness = model.left_openmindedness,
+                            openness_to_influencers = model.openness_to_influencers,
                             mega_influencer_df = new_mega_influencer_df, 
                             threshold = model.threshold)
 
@@ -437,18 +451,15 @@ class NetworkSimulation(ABC):
     def one_dynamics_iteration(self, 
                         belief_df, 
                         adjacency_df,
-                        right_openmindedness, 
-                        left_openmindedness,
+                        openness_to_influencers,
                         mega_influencer_df, 
                         threshold):
         """ Returns updated belief_df.
         Inputs: 
             belief_df: (dataframe)
             adjacency_df: (dataframe)
-            left_openmindedness: (float) distance in opinion space that left 
-                mega-influencers can reach.
-            right_openmindedness: (float) distance in opinion space that right 
-                mega-influencers can reach.
+            openness_to_influencers: (float) distance in opinion space that 
+                mega-influencers can reach; this is "epsilon" from [1].
             threshold: (int) value below which opinions no longer change.
 
         Returns: 
@@ -468,35 +479,33 @@ class NetworkSimulation(ABC):
                 
                 new_belief = np.sum(belief_df.loc[edges,"belief"]) + current_belief
                 
-                if right_openmindedness > 0:
-                    # Am  I connected to them?
+                if openness_to_influencers > 0:
+                    # Am  I connected to the right mega-influencer?
                     if mega_influencer_df.loc[2,i] == 1:
                         # Do I listen to them?
-                        if np.abs(current_belief - 2) <= right_openmindedness:
+                        if np.abs(current_belief - 2) <= openness_to_influencers:
                             n_edges = n_edges + 1
                             new_belief = new_belief + 2
-                        # If not, flip a biased coint to decide if my influencer connection
+                        # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
+                            new_mega_influencer_df.loc[2,i] == 0
                             u = np.random.uniform(0,1)
-                            if u < self.model.reach_dict[0]:
-                                new_mega_influencer_df.loc[2,i] == 0
+                            if u < self.left_reach:
                                 new_mega_influencer_df.loc[0,i] == 1
 
-                        
-                if left_openmindedness > 0:
-                    # Am  I connected to them?
+                    # Am  I connected to the left mega-influencer?
                     if mega_influencer_df.loc[0,i] == 1:
                         # Do I listen to them?
-                        if np.abs(current_belief  - 0) <= left_openmindedness:
+                        if np.abs(current_belief  - 0) <= openness_to_influencers:
                             n_edges = n_edges + 1
                             new_belief = new_belief + 0
-                        # If not, flip a biased coint to decide if my influencer connection
+                        # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
+                            new_mega_influencer_df.loc[0,i] == 0
                             u = np.random.uniform(0,1)
-                            if u < self.model.reach_dict[2]:
-                                new_mega_influencer_df.loc[0,i] == 0
+                            if u < self.right_reach:
                                 new_mega_influencer_df.loc[2,i] == 1
                     
                 new_belief = new_belief / (n_edges + 1)
