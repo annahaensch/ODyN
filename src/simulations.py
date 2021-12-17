@@ -94,18 +94,32 @@ class OpinionNetworkModel(ABC):
         self.clustering_coefficient = 0
         self.mean_degree = 0
 
-    def populate_model(self, num_agents = None, density = None, show_plot = False):
+    def populate_model(self, num_agents = None, geo_df = None, bounding_box = None, show_plot = False):
         """ Fully initialized but untrained OpinionNetworkModel instance.
 
         Input:
             num_agents: (int) number of agents to plot.
+            geo_df: (dataframe) geographic datatframe including county geometry. 
+            bounding_box: (list) list of 4 vertices determining a bounding box 
+                where agents are to be added.  If no box is given, agents are added
+                to a random triangle.
             show_plot: (bool) if true then plot is shown. 
         
         Output: 
             OpinionNetworkModel instance.
         """
-        agent_df = self.add_random_agents_to_triangle(num_agents = num_agents, 
-            density = density)
+        if bounding_box is None:
+            agent_df = self.add_random_agents_to_triangle(num_agents = num_agents, 
+                                                        geo_df = geo_df,
+                                                        show_plot = False)
+        else:
+            if geo_df is None:
+                raise ValueError("If a bounding box is specified, then a "
+                    "geo_df must also be given.")
+            agent_df = self.add_random_agents_to_triangles(geo_df = geo_df, 
+                                                        bounding_box = bounding_box, 
+                                                        show_plot = False)
+
         logging.info("\n {} agents added.".format(agent_df.shape[0]))
         
         belief_df = self.assign_weights_and_beliefs(agent_df)
@@ -141,31 +155,28 @@ class OpinionNetworkModel(ABC):
         plot_network(self)
         return None
 
-    def add_random_agents_to_triangle(self, num_agents, triangle_object = None, density = None, 
+    def add_random_agents_to_triangle(self, num_agents, geo_df = None, triangle_object = None, 
         show_plot = False):
         """ Assign N points on a triangle using Poisson point process.
         
         Input:
             num_agents: (int) number of agents to add to the triangle.  If None, 
                 then agents are added according to density.
+            geo_df: (dataframe) geographic datatframe including county geometry. 
             triangle_object: (Polygon) bounded triangular region to be populated.
-            density: (float) density of agents, if none, then num_agents are plotted
-                in triangle with sarea 1 km^2.
             show_plot: (bool) if true then plot is shown. 
 
         Returns: 
             An num_agents x 2 dataframe of point coordinates.
         """ 
         if triangle_object is None:
-            
-            if density is not None:
-                # Plot num_agents on variable sized triangle with correct density.
-                b = 1419 * (num_agents/density) ** (1/2)
-                triangle_object = Polygon([[0,0],[b,0], [b/2,b],[0,0]])
+            # If no triangle is given, initialize triangle with area 1 km^2.       
+            triangle_object = Polygon([[0,0],[1419,0], [1419/2,1419],[0,0]])
 
-            else:
-                # If no density is given, fill triangle with area 1 km^2.       
-                b = 1419
+            # If density is specified, adjust triangle size.
+            if geo_df is not None:
+                density = geo_df.loc[0,"density"]
+                b = 1419 * (num_agents/density) ** (1/2)
                 triangle_object = Polygon([[0,0],[b,0], [b/2,b],[0,0]])
 
         bnd = list(triangle_object.boundary.coords)
@@ -257,8 +268,8 @@ class OpinionNetworkModel(ABC):
             num_agents = int(area * geo_df.loc[0,"density"])
             if num_agents > 0:
                 df = self.add_random_agents_to_triangle(num_agents, 
-                                                    triangle_object = tri_df.loc[i,"geometry"], 
-                                                    density = None, 
+                                                    geo_df = geo_df,
+                                                    triangle_object = tri_df.loc[i,"geometry"],  
                                                     show_plot = False)
             agent_df = pd.concat([agent_df,df])
         
