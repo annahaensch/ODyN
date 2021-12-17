@@ -20,14 +20,14 @@ def main():
     if isdir == False:
         os.mkdir("../data/sym/no_name_county")
 
-    logging.info("Loading SYM geographic data.")
+    print("Loading SYM geographic data.")
 
 
     model = odyn.OpinionNetworkModel(
                                 probabilities = [.45,.1,.45],
-                                distance_scaling_factor = 1/50,
-                                importance_of_weight = 1.3, 
-                                importance_of_distance = 2.7,
+	                            distance_scaling_factor = 1/10,
+	                            importance_of_weight = 1.6, 
+	                            importance_of_distance = 8.5,
                                 include_weight = True,
                                 include_opinion = True
                                )
@@ -47,11 +47,11 @@ def main():
     model.adjacency_df.to_parquet("../data/sym/no_name_county/adjacency_df.pq")
     model.adjacency_df.columns = [int(i) for i in model.adjacency_df.columns]
 
-    logging.info("\n Model Loaded.")
+    print("\n Model Loaded.")
 
     
     # Run simulations for no influencers.
-    logging.info("\n Running simulation for no influencers.")
+    print("\n Running simulation for no influencers.")
     
     model.left_reach = 0
     model.right_reach = 0
@@ -70,7 +70,7 @@ def main():
     for i in range(len(reaches)):
         r = reaches[i]
 
-        logging.info("\n Running simulation for r = {}".format(r))
+        print("\n Running simulation for r = {}".format(r))
         
         model.left_reach = r/10
         model.right_reach = .8
