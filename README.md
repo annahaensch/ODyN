@@ -64,7 +64,7 @@ There are many more default parameters that can be updated; more information abo
 
 #### Populate Model
 
-There are several options for populating the model with agents.  The simplest option is to add a fixed number of agents without including a density parameter.  This will default to plotting the requested number of agents on a triangle with area equivalent to 1 km^2. 
+There are several options for populating the model with agents.  One option is to add the agents using the geodata already stored in `geo_df` (this will include the coordinates for relevant triangles as well as recorded population densities).
 
 ```
 # Populate model.
@@ -96,7 +96,7 @@ Now we are ready to run a simulation on a model instance.  This is done by loadi
 
 ```
 sim = odyn.NetworkSimulation()
-sim.run_simulation(model = model, phases = 60)
+sim.run_simulation(model = model, phases = 5)
 sim.plot_simulation_results()
 ```
 ![ridge_plot.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ridge_plot.png?raw=true)
