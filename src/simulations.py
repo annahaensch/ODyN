@@ -444,7 +444,8 @@ class NetworkSimulation(ABC):
         else:
             t = self.phases // 5
             plot_phases = [0] + [t * (i+1) for i in range(1,5)]
-        get_ridge_plot(df, plot_phases, reach_dict = self.model.reach_dict)
+        get_ridge_plot(df, plot_phases, reach_dict = {0:self.model.left_reach,
+                                                    2:self.model.right_reach})
         return None
 
 
@@ -491,7 +492,7 @@ class NetworkSimulation(ABC):
                         else:
                             new_mega_influencer_df.loc[2,i] == 0
                             u = np.random.uniform(0,1)
-                            if u < self.left_reach:
+                            if u < self.model.left_reach:
                                 new_mega_influencer_df.loc[0,i] == 1
 
                     # Am  I connected to the left mega-influencer?
@@ -505,7 +506,7 @@ class NetworkSimulation(ABC):
                         else:
                             new_mega_influencer_df.loc[0,i] == 0
                             u = np.random.uniform(0,1)
-                            if u < self.right_reach:
+                            if u < self.model.right_reach:
                                 new_mega_influencer_df.loc[2,i] == 1
                     
                 new_belief = new_belief / (n_edges + 1)

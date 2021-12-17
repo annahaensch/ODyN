@@ -429,15 +429,18 @@ def plot_network(model):
     if op == True:
         if wt == True:
             title = "Connections based on physical distance, opinion proximity and weight"
-        else:
+        if wt == False:
             title = "Connections based on physical distance and opinion proximity"
-    else:
+    if op == False:
+        if wt == True:
+            title = "Connections based on physical distance and weight"
+        if wt == False:
+            title = "Connections based on physical distance"
 
-        title = "Connections based on physical distance and weight"
 
 
     title = title + "\n clustering coefficient: " + str(
-        np.around(cc, decimals = 3)) + "\n average degree: " + str(
+        np.around(cc, decimals = 3)) + "\n average in-degree: " + str(
         np.around(md, decimals = 1))
     ax.set_title(title)
         
