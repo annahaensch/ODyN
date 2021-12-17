@@ -64,6 +64,7 @@ def main():
 
     sim = odyn.NetworkSimulation()
     sim.run_simulation(model = model, phases = 60)
+    sim.dynamic_belief_df.columns = [str(i) for i in sim.dynamic_belief_df.columns]
     sim.dynamic_belief_df.to_parquet(
         "../data/anti/no_name_county/simulation_results_none.pq")
 
