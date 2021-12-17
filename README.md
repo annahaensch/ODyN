@@ -35,7 +35,7 @@ odyn.plot_triangulated_county(geo_df,
                               bounding_box = bounding_box,
                               restricted = True)
 ```
-![or_triangulated_inset.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_triangulated.png?raw=true)
+![or_triangulated_inset.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_triangulated_inset.png?raw=true)
 
 County mapping data will include area, population estimates, mapping coordinates, and vaccine hesitancy estimates for the county and state. Data for Montgomery, AL and Multnomah, OR has been preloaded so it will run quickly, other counties will download data directly from the [CDC website](https://data.cdc.gov/Vaccinations/Vaccine-Hesitancy-for-COVID-19-County-and-local-es/q9mh-h2tw), which might take a few minutes. From here we can read the probabilities of the three relevant modes
 * 0 - *not vaccine hesitant*
