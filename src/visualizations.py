@@ -329,26 +329,75 @@ def relative_vaccine_trends_plot(county = None,
     plt.show()
     return None
 
-def plot_triangulated_county(geo_df):
+def plot_triangulated_county(geo_df, bounding_box = None, restricted = False, aspect_ratio = 1):
     """ Plots county with triangular regions.
     
     Inputs: 
         geo_df: (dataframe) geographic datatframe including county geometry.
+        bounding_box: (list) list of 4 vertices determining a bounding box 
+                where agents are to be added.  If no box is given, then the 
+                bounding box is taken as the envelope of the county.
+        restricted: (bool) if True then region is restrict to bounding box.
+        aspect_ratio: (float) aspect ratio of final plot.
 
     Returns: 
         Boundary of county and triangulation of region.
     """
     tri_dict = make_triangulation(geo_df)
     tri_df = gpd.GeoDataFrame({"geometry":[Polygon(t) for t in tri_dict["geometry"]["coordinates"]]})
-        
+    
+    # Establish initial CRS
+    tri_df.crs = "EPSG:3857"
+
+    # Set CRS to lat/lon
+    tri_df = tri_df.to_crs(epsg=4326) 
+
     fig, ax = plt.subplots(figsize = (10,10))
-    tri_df.boundary.plot(ax = ax, alpha=1, 
-                         edgecolor = COLORS["light_blue"])
+    linewidth = 1
+    # Get bounding box geometry.
+    if bounding_box is not None:
+        sq_df = gpd.GeoDataFrame({"geometry":[Polygon(bounding_box)]})
+        
+        # Get bounded triangles.
+        if restricted == True:
+            inset = [i for i in tri_df.index if tri_df.loc[i,"geometry"].within(sq_df.loc[0,"geometry"])]
+            tri_df = tri_df.loc[inset,:].copy()
 
-    geo_df.boundary.plot(ax = ax,edgecolor = "black")
+            # Set plot limits.
+            minx = np.array(bounding_box)[:,0].min()
+            miny = np.array(bounding_box)[:,1].min()
+            maxx = np.array(bounding_box)[:,0].max()
+            maxy = np.array(bounding_box)[:,1].max()
+            
+            ax.set_xlim(minx - .0005,maxx + .0005)
+            ax.set_ylim(miny - .0005,maxy + .0005)
+
+            linewidth = 4
+
+    # Plot triangles
+    tri_df.boundary.plot(ax = ax, 
+                        alpha=1, 
+                        linewidth = linewidth,
+                        edgecolor = COLORS["light_blue"])
+
+    # Plot county boundary.
+    geo_df.crs = "EPSG:3857"
+    geo_df = geo_df.to_crs(epsg=4326) 
+    geo_df.boundary.plot(ax = ax,edgecolor = "black", linewidth = linewidth)
+
+    # Plot bounding box.
+    if bounding_box is not None:
+        if restricted == False:
+            sq_df.boundary.plot(ax = ax, 
+                                alpha = 1, 
+                                linestyle = "--", 
+                                linewidth = 2, 
+                                color = COLORS["dark_orange"])
+
     ax.set_axis_off()
-
+    ax.set_aspect(aspect_ratio)
     plt.show()
+
     return None
 
 def plot_agents_on_triangle(triangle_object, agent_df):
@@ -370,7 +419,7 @@ def plot_agents_on_triangle(triangle_object, agent_df):
     plt.show()
     return None
 
-def plot_agents_on_triangle_with_belief(belief_df):
+def plot_agents_with_belief_and_weight(belief_df):
     """ Returns triangle filled with agents.
 
     Inputs: 
@@ -387,8 +436,9 @@ def plot_agents_on_triangle_with_belief(belief_df):
 
     ax.scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
     ax.scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
-    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")     
-    plt.legend(loc = "best")
+    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")
+    ax.set_axis_off()     
+    plt.legend(loc = "best", prop={'size': 15})
     
     plt.show()
     return None
