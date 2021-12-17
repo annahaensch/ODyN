@@ -394,7 +394,6 @@ def plot_triangulated_county(geo_df, bounding_box = None, restricted = False, as
                                 linewidth = 2, 
                                 color = COLORS["dark_orange"])
 
-    ax.set_axis_off()
     ax.set_aspect(aspect_ratio)
     plt.show()
 
