@@ -12,15 +12,30 @@ This repository contains Opinion Dynamics Network (ODyN) tools and data to simul
 
 #### Load Geographic Data
 
-We begin by Loading geographic and vaccine hesitancy data for a specific county, such as Montgomery, AL. Eventualy counties will be populated by adding "agents" to triangles with a specified density.  We use triangles because this is a convenient way to decompose the polygonal region into manageable pieces that can be filled using a Poisson point process. In case it's helpful, we've included a tool to visualize the triangulated county. 
+We begin by Loading geographic and vaccine hesitancy data for a specific county, such as Multnomah, OR. Eventualy counties will be populated by adding "agents" to triangles with a specified density.  We use triangles because this is a convenient way to decompose the polygonal region into manageable pieces that can be filled using a Poisson point process. In case it's helpful, we've included a tool to visualize the triangulated county. 
 
 ```
 import src as odyn
 
-geo_df = odyn.get_county_mapping_data(county = "Montgomery", state = "AL")
+geo_df = odyn.get_county_mapping_data(county = "Multnomah", state = "OR")
 odyn.plot_triangulated_county(geo_df)
 ```
-![al_triangulated.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/al_triangulated.png?raw=true)
+![or_triangulated.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_triangulated.png?raw=true)
+
+It's also possible to select for small bounded geographic regions using a `bounding_box`.  For example, we could focus on only the upper right corner of the county. 
+
+```
+bounding_box = [[-121.965, 45.62], 
+                [-121.92, 45.62], 
+                [-121.92, 45.65], 
+                [-121.965, 45.65], 
+                [-121.965, 45.62]]
+
+odyn.plot_triangulated_county(geo_df, 
+                              bounding_box = bounding_box,
+                              restricted = True)
+```
+![or_triangulated_inset.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_triangulated.png?raw=true)
 
 County mapping data will include area, population estimates, mapping coordinates, and vaccine hesitancy estimates for the county and state. Data for Montgomery, AL and Multnomah, OR has been preloaded so it will run quickly, other counties will download data directly from the [CDC website](https://data.cdc.gov/Vaccinations/Vaccine-Hesitancy-for-COVID-19-County-and-local-es/q9mh-h2tw), which might take a few minutes. From here we can read the probabilities of the three relevant modes
 * 0 - *not vaccine hesitant*
@@ -38,10 +53,12 @@ probability = list(hesitancy_dict.values())
 
 A model can be initialized by supplying only the list of probabilities for the desired modes. 
 ```
-p = list(hesitancy_dict.values())
-
 # Load model object.
-model = odyn.OpinionNetworkModel(probabilities = p)
+model = odyn.OpinionNetworkModel(probabilities = prob,
+                                include_weight = True,
+                                include_opinion = True,
+                                importance_of_weight = 0.1,
+                                importance_of_distance = 9)
 ```
 There are many more default parameters that can be updated; more information about these parameters can be found in `simulations.py`. 
 
@@ -51,26 +68,27 @@ There are several options for populating the model with agents.  The simplest op
 
 ```
 # Populate model.
-model.populate_model(num_agents = 500)
+model.populate_model(geo_df = geo_df, 
+                     bounding_box = bounding_box)
 
 # Plot initial network.
 model.plot_initial_network()
 ```
-![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model.png?raw=true)
+![or_triangulated_with_connections.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/or_triangulated_with_connections.png?raw=true)
 
-Another option is to plot agents with attention to density.  In this case, the requested number of agents are plotted on a triangle with variable area, satisfying the density requirement. 
+Another option is to populate a more generic model, by plotting agents on random triangles with a specified number of agents and belief distribution. 
 
 ```
 # Populate model.
-model.populate_model(num_agents = 500, 
-		density = 200)
+model = odyn.OpinionNetworkModel(probabilities = [.45,.1,.45])
+model.populate_model(num_agents = 1000)
 
 # Plot initial network.
 model.plot_initial_network()
 ```
-![network_model_with_density.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model_with_density.png?raw=true)
+![network_model.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network_model_with_density.png?raw=true)
 
-Notice that the clusering coefficient and mean degree are both smaller in the example where agents are plotted with density.  This is because 500 agents are plotted with a density of 200 agents/km^2 so they have greated distance between then, and are therefore less likely to be connected under the present model. 
+This workflow is demonstrated in the included notebook: `workflow_demo_Mutnomah_OR.ipynb.`
 
 #### Run Simulation
 
@@ -83,12 +101,12 @@ sim.plot_simulation_results()
 ```
 ![ridge_plot.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ridge_plot.png?raw=true)
 
-Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  or example, from the top level directory, run the following
+Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  For example, from the top level directory, run the following
 ```
 > cd scripts
-> python skewed_simulation.py
+> python accepting_simulation.py
 ```
-to produce simulation results for Montgomery County, Alabama.
+to produce simulation results for Multnomah County, Oregon.
 
 ## Vaccine Trend Visualizations
 
