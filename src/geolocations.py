@@ -134,9 +134,9 @@ def get_county_mapping_data(county = None, state = None):
     geo_df["strongly_hesitant"] = hesitancy_df[
                     "Estimated strongly hesitant"].iloc[0]
     geo_df["hesitant_or_unsure"] = hesitancy_df[
+                    "Estimated hesitant or unsure"].iloc[0] - geo_df["strongly_hesitant"]
+    geo_df["not_hesitant"] = 1 - hesitancy_df[
                     "Estimated hesitant or unsure"].iloc[0]
-    geo_df["not_hesitant"] = 1 - (geo_df["hesitant_or_unsure"] + 
-                    geo_df["strongly_hesitant"])
 
     return geo_df
 
