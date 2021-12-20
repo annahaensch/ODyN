@@ -506,13 +506,18 @@ def plot_network(model):
     None
 
 
-def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
+def get_ridge_plot(dynamic_belief_df, phases, reach_dict, 
+                show_legend = False, show_subplot_labels = True,
+                show_title = True):
     """ Ridgeplot of updating beliefs.
 
     Inputs: 
-        dynamic_belief_df - (dataframe) updating beliefs across multiple phases
-        phases - (list) phases to show in plot.
+        dynamic_belief_df: (dataframe) updating beliefs across multiple phases
+        phases: (list) phases to show in plot.
         reach_dict: (dictionary) value is propotional reach of key.
+        show_legend: (bool) if True, show legend.
+        show_subplot_labels: (bool) if True show subplot labels.
+        show_title: (bool) if True show plot title.
 
     Ouputs: 
         Ridgeplot of updating belief distributions over phases.
@@ -522,6 +527,7 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
 
     gs = grid_spec.GridSpec(len(phases),1)
     fig = plt.figure(figsize=(8,4))
+
     i = 0
 
     ax_objs = []
@@ -536,10 +542,15 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
         ax_objs[-1].set_yticks([])
         ax_objs[-1].set_yticklabels([])
         ax_objs[-1].set_ylabel('')
+        
+        ax_objs[-1].axvline(x = dynamic_belief_df[0].mean(), 
+            color = COLORS["dark_blue"])
 
         #ax_objs[-1].set_axis_off()
-        ax_objs[-1].text(2.05,0,"{} phases".format(phases[p]),fontweight="bold",
-            fontsize=10,ha="left")
+        if show_subplot_labels == True:
+            ax_objs[-1].text(2.05,0,"{} time steps".format(phases[p]),
+                fontweight = "bold",
+                fontsize=10,ha="left")
 
         # make background transparent
         rect = ax_objs[-1].patch
@@ -547,9 +558,9 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
 
         if i == len(phases)-1:
             ax_objs[-1].set_xticks([0,1,2])
-            ax_objs[-1].set_xticklabels(["Not Hesitant", 
-                                        "Hesitant or Unsure",
-                                        "Strongly Hesitant"])
+            ax_objs[-1].set_xticklabels([0, 
+                                        1,
+                                        2])
         else:
             ax_objs[-1].set_xticks([])
             ax_objs[-1].set_xticklabels([])
@@ -557,15 +568,18 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict):
         spines = ["top","right","left","bottom"]
         for s in spines:
             ax_objs[-1].spines[s].set_visible(False)
-
+            
         i += 1
-
+        
+    
     gs.update(hspace=-0.7)
     left = int(reach_dict[0] * 100)
     right = int(reach_dict[2] *100)
-    ax_objs[0].set_title("Left Influencer Reach: {}%\nRight Influencer Reach: {}%".format(left, right), 
-        fontsize =12)
+    if show_legend == True:
+        plt.plot([],[],color = COLORS["dark_blue"], label = "Initial mean belief")
+        plt.legend(loc = "upper right", bbox_to_anchor = (1.15,2))
+    if show_title == True:
+        plt.title("Left Reach: {}%    Right Reach: {}%".format(left, right), 
+            y=-.4, fontweight = "bold")
 
-    plt.suptitle("Belief Dynamics over {} Phases".format(phases[-1]), 
-        fontsize =14, y = 1.05)
     return None
