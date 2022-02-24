@@ -266,6 +266,7 @@ class OpinionNetworkModel(ABC):
             coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
             area = shape(coord_proj).area / (10 ** 6) # area in km^2
             num_agents = int(area * geo_df.loc[0,"density"])
+            df = pd.DataFrame(columns = ["x","y"])
             if num_agents > 0:
                 df = self.add_random_agents_to_triangle(num_agents, 
                                                     geo_df = geo_df,
