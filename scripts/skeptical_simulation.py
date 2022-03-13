@@ -12,7 +12,8 @@ logging.basicConfig(level=logging.INFO)
 
 def main(run_n):
 
-    my_path = "../data/anti/no_name_county/run_{}".format(run_n)
+    my_path = os.popen("git rev-parse --show-toplevel").read().strip("\n")
+    my_path = my_path + "/data/anti/no_name_county/run_{}".format(run_n)
     isdir = os.path.isdir(my_path)
     if isdir == False:
         os.mkdir(my_path)
