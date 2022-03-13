@@ -266,6 +266,7 @@ class OpinionNetworkModel(ABC):
             coord_proj = {"type": "Polygon", "coordinates": [zip(x, y)]}
             area = shape(coord_proj).area / (10 ** 6) # area in km^2
             num_agents = int(area * geo_df.loc[0,"density"])
+            df = pd.DataFrame(columns = ["x","y"])
             if num_agents > 0:
                 df = self.add_random_agents_to_triangle(num_agents, 
                                                     geo_df = geo_df,
@@ -456,16 +457,16 @@ class NetworkSimulation(ABC):
     """
     def __init__(self):
         self.model = None
-        self.phases = None
+        self.stopping_thresh = None
         self.results = []
         self.dynamic_belief_df = None
 
-    def run_simulation(self, model, phases, show_plot = False, store_results = False):
+    def run_simulation(self, model, stopping_thresh = .05, show_plot = False, store_results = False):
         """ Carry out simulation.
 
         Inputs: 
             model: OpinionNetworkModel instance.
-            phases: (int) number of phases of simulation to carry out.
+            stopping_thresh: (float) threshold for stopping criterion.
             show_plot: (bool) if true, shows ridge plot.
             store_results: (bool) if True, stores results for all phases, if False
                 then only updating beliefs are stored.
@@ -480,11 +481,14 @@ class NetworkSimulation(ABC):
         new_adjacency_df = model.adjacency_df.copy()
         new_mega_influencer_df = model.mega_influencer_df.copy()
 
-        df = pd.DataFrame(columns = [i for i in range(phases + 1)])
+        df = pd.DataFrame()
         df[0] = new_belief_df["belief"].values
 
-        self.phases = phases
-        for i in range(phases):
+        self.stopping_thresh = stopping_thresh
+        stopping_df = pd.DataFrame()
+
+        i = 0
+        while True:
             phase_dict = {}
             new_belief_df, new_mega_influencer_df = self.one_dynamics_iteration(
                             belief_df = new_belief_df,
@@ -505,6 +509,15 @@ class NetworkSimulation(ABC):
             results.append(phase_dict)
             df[i+1] = new_belief_df["belief"].values
 
+            stopping_df[i] = df.iloc[:,i+1] - df.iloc[:,i]
+            i = i+1
+            # Check that at least 5 iterations have been carried out.       
+            if stopping_df.shape[1] > 5:
+                # If rolling average change is less than stopping_thresh, break.
+                if stopping_df.rolling(window = 5, axis = 1).mean().iloc[:,-1
+                                                    ].abs().max() < stopping_thresh:
+                    break
+
         self.dynamic_belief_df = df
 
         if show_plot == True:
@@ -518,12 +531,13 @@ class NetworkSimulation(ABC):
         """ Return ridgeplot of simulation.
         """
         df = self.dynamic_belief_df
+        phases = df.shape[1] - 1
         if df is None:
             raise ValueError("It looks like the simulation hasn't been run yet.")
-        if self.phases < 5:
-            plot_phases = [t for t in range(self.phases +1)]
+        if phases < 5:
+            plot_phases = [t for t in range(phases +1)]
         else:
-            t = self.phases // 5
+            t = phases // 5
             plot_phases = [0] + [t * (i+1) for i in range(1,5)]
         get_ridge_plot(df, plot_phases, reach_dict = {0:self.model.left_reach,
                                                     2:self.model.right_reach})

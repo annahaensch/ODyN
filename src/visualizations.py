@@ -507,7 +507,7 @@ def plot_network(model):
 
 
 def get_ridge_plot(dynamic_belief_df, phases, reach_dict, 
-                show_legend = False, show_subplot_labels = True,
+                show_subplot_labels = True,
                 show_title = True):
     """ Ridgeplot of updating beliefs.
 
@@ -515,7 +515,6 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict,
         dynamic_belief_df: (dataframe) updating beliefs across multiple phases
         phases: (list) phases to show in plot.
         reach_dict: (dictionary) value is propotional reach of key.
-        show_legend: (bool) if True, show legend.
         show_subplot_labels: (bool) if True show subplot labels.
         show_title: (bool) if True show plot title.
 
@@ -543,12 +542,9 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict,
         ax_objs[-1].set_yticklabels([])
         ax_objs[-1].set_ylabel('')
         
-        ax_objs[-1].axvline(x = dynamic_belief_df[0].mean(), 
-            color = COLORS["dark_blue"])
-
         #ax_objs[-1].set_axis_off()
         if show_subplot_labels == True:
-            ax_objs[-1].text(2.05,0,"{} time steps".format(phases[p]),
+            ax_objs[-1].text(2.1,0,"{} time steps".format(phases[p]),
                 fontweight = "bold",
                 fontsize=10,ha="left")
 
@@ -575,9 +571,6 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict,
     gs.update(hspace=-0.7)
     left = int(reach_dict[0] * 100)
     right = int(reach_dict[2] *100)
-    if show_legend == True:
-        plt.plot([],[],color = COLORS["dark_blue"], label = "Initial mean belief")
-        plt.legend(loc = "upper right", bbox_to_anchor = (1.15,2))
     if show_title == True:
         plt.title("Left Reach: {}%    Right Reach: {}%".format(left, right), 
             y=-.4, fontweight = "bold")

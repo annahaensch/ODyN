@@ -17,6 +17,8 @@ import us
 
 logging.basicConfig(level=logging.WARNING)
 
+my_path = os.popen("git rev-parse --show-toplevel").read().strip("\n")
+
 def load_county_hesitancy_data(county = None, state = None, download_data = False):
     """ Return geodataframe with hesitancy data.
 
@@ -33,9 +35,8 @@ def load_county_hesitancy_data(county = None, state = None, download_data = Fals
 
     if download_data == False:
         hesitancy_df = pd.read_csv(
-            "../data/{}_county_{}_hesitancy.csv".format(
-            county.lower(), state.lower()), index_col = 0)
-
+            "{}/data/{}_county_{}_hesitancy.csv".format(
+            my_path, county.lower(), state.lower()), index_col = 0)
     else:
         hesitancy_df = pd.read_csv(
             "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
