@@ -14,7 +14,7 @@ class TestSimulation(unittest.TestCase):
 
         # Load Model.
         model = odyn.OpinionNetworkModel(
-                            probabilities = [0.8831, 0.04920000000000001, 0.0677],#prob,
+                            probabilities = prob,
                             importance_of_weight = 5,
                             importance_of_distance = 2.5,
                            )
