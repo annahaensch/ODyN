@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-
+import pandas as pd
 import src as odyn
 
 class TestSimulation(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestSimulation(unittest.TestCase):
 
         # Load Model.
         model = odyn.OpinionNetworkModel(
-                            probabilities = prob,
+                            probabilities = [0.8831, 0.04920000000000001, 0.0677],#prob,
                             importance_of_weight = 5,
                             importance_of_distance = 2.5,
                            )
@@ -27,8 +27,13 @@ class TestSimulation(unittest.TestCase):
 
         # Run simulation.
         sim = odyn.NetworkSimulation()
-        sim.run_simulation(model = model, phases = 2)
-        self.assertEqual(int(sim.dynamic_belief_df.shape[1]),3)
+        sim.run_simulation(model = model, stopping_thresh = 2)
+        
+        stopping_df = pd.DataFrame()
+        for i in range(sim.dynamic_belief_df.shape[1] -1):
+            stopping_df[i] = sim.dynamic_belief_df.iloc[:,i+1] - sim.dynamic_belief_df.iloc[:,i]
+        df = stopping_df.rolling(window = 5, axis = 1).mean().iloc[:,-1]
+        self.assertTrue(df.abs().max() < 1)
 
 if __name__ == '__main__':
     unittest.main()
