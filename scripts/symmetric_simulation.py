@@ -10,18 +10,14 @@ import os
 
 logging.basicConfig(level=logging.INFO)
 
-def main():
+def main(run_n):
 
-    # Make directory if it doesn't exist.
-    isdir = os.path.isdir("../data/sym")
+    my_path = "../data/sym/no_name_county/run_{}".format(run_n)
+    isdir = os.path.isdir(my_path)
     if isdir == False:
-        os.mkdir("../data/sym")
-    isdir = os.path.isdir("../data/sym/no_name_county")
-    if isdir == False:
-        os.mkdir("../data/sym/no_name_county")
-
+        os.mkdir(my_path)
+        
     print("Loading SYM geographic data.")
-
 
     model = odyn.OpinionNetworkModel(
                                 probabilities = [.45,.1,.45],
@@ -37,14 +33,14 @@ def main():
     initial_belief_df = model.belief_df.copy()
 
     # Save population data.
-    model.agent_df.to_parquet("../data/sym/no_name_county/agent_df.pq")
-    model.belief_df.to_parquet("../data/sym/no_name_county/belief_df.pq")
+    model.agent_df.to_parquet("{}/agent_df.pq".format(my_path))
+    model.belief_df.to_parquet("{}/belief_df.pq".format(my_path))
     model.prob_df.columns = [str(i) for i in model.prob_df.columns]
-    model.prob_df.to_parquet("../data/sym/no_name_county/prob_df.pq")
+    model.prob_df.to_parquet("{}/prob_df.pq".format(my_path))
     model.prob_df.columns = [int(i) for i in model.prob_df.columns]
 
     model.adjacency_df.columns = [str(i) for i in model.adjacency_df.columns]
-    model.adjacency_df.to_parquet("../data/sym/no_name_county/adjacency_df.pq")
+    model.adjacency_df.to_parquet("{}/adjacency_df.pq".format(my_path))
     model.adjacency_df.columns = [int(i) for i in model.adjacency_df.columns]
 
     print("\n Model Loaded.")
@@ -60,10 +56,9 @@ def main():
     model.mega_influencer_df = mega_influencer_df
 
     sim = odyn.NetworkSimulation()
-    sim.run_simulation(model = model, phases = 60)
+    sim.run_simulation(model = model)
     sim.dynamic_belief_df.columns = [str(i) for i in sim.dynamic_belief_df.columns]
-    sim.dynamic_belief_df.to_parquet(
-        "../data/sym/no_name_county/simulation_results_none.pq")
+    sim.dynamic_belief_df.to_parquet("{}/simulation_results_none.pq".format(my_path))
 
     # Run simulations for left reach 0,.2,.4,.6,.8,1. with right reach .8.
     reaches = [0,2,4,6,8,10]
@@ -79,13 +74,14 @@ def main():
         model.mega_influencer_df = mega_influencer_df
 
         sim = odyn.NetworkSimulation()
-        sim.run_simulation(model = model, phases = 60, store_results = False)
+        sim.run_simulation(model = model, store_results = False)
         sim.dynamic_belief_df.columns = [str(i) for i in sim.dynamic_belief_df.columns]
         sim.dynamic_belief_df.to_parquet(
-            "../data/sym/no_name_county/simulation_results_{}.pq".format(r))
+            "{}/simulation_results_{}.pq".format(my_path,r))
 
     return None
 
 
 if __name__ == '__main__':
-    main()
+    run_n = sys.argv[1]
+    main(run_n)
