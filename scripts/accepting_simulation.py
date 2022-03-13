@@ -17,7 +17,7 @@ def main(run_n = 0):
     
     isdir = os.path.isdir(my_path)
     if isdir == False:
-        os.mkdir(my_path)
+        os.makedirs(my_path)
 
     print("Loading OR geographic data.")
 

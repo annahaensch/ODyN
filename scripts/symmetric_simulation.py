@@ -16,7 +16,7 @@ def main(run_n):
     my_path = my_path + "/data/sym/no_name_county/run_{}".format(run_n)
     isdir = os.path.isdir(my_path)
     if isdir == False:
-        os.mkdir(my_path)
+        os.makedirs(my_path)
         
     print("Loading SYM geographic data.")
 
