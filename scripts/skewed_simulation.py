@@ -16,7 +16,7 @@ def main(run_n):
     my_path = my_path + "/data/al/montgomery/run_{}".format(run_n)
     isdir = os.path.isdir(my_path)
     if isdir == False:
-        os.mkdir(my_path)
+        os.makedirs(my_path)
         
     print("Loading AL geographic data.")
 
