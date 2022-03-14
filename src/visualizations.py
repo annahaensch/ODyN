@@ -506,7 +506,9 @@ def plot_network(model):
     None
 
 
-def get_ridge_plot(dynamic_belief_df, phases, reach_dict, 
+def get_ridge_plot(dynamic_belief_df, 
+                phases = [], 
+                reach_dict = None, 
                 show_subplot_labels = True,
                 show_title = True):
     """ Ridgeplot of updating beliefs.
@@ -521,6 +523,14 @@ def get_ridge_plot(dynamic_belief_df, phases, reach_dict,
     Ouputs: 
         Ridgeplot of updating belief distributions over phases.
     """
+    if phases == []:
+        phases = dynamic_belief_df.shape[1] - 1
+        if phases < 5:
+            phases = [t for t in range(phases +1)]
+        else:
+            t = phases // 5
+            phases = [0] + [t * (i+1) for i in range(1,5)]
+
     c = ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c']
     xx = np.linspace(0, 2, 1000)
 
