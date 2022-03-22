@@ -461,7 +461,7 @@ class NetworkSimulation(ABC):
         self.results = []
         self.dynamic_belief_df = None
 
-    def run_simulation(self, model, stopping_thresh = .05, show_plot = False, store_results = False):
+    def run_simulation(self, model, stopping_thresh = .01, show_plot = False, store_results = False):
         """ Carry out simulation.
 
         Inputs: 
@@ -515,7 +515,7 @@ class NetworkSimulation(ABC):
             if stopping_df.shape[1] > 5:
                 # If rolling average change is less than stopping_thresh, break.
                 if stopping_df.rolling(window = 5, axis = 1).mean().iloc[:,-1
-                                                    ].abs().max() < stopping_thresh:
+                                                    ].abs().mean() < stopping_thresh:
                     break
 
         self.dynamic_belief_df = df
