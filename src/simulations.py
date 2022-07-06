@@ -585,10 +585,10 @@ class NetworkSimulation(ABC):
                         # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
-                            new_mega_influencer_df.loc[2,i] == 0
                             u = np.random.uniform(0,1)
                             if u < self.model.left_reach:
-                                new_mega_influencer_df.loc[0,i] == 1
+                                new_mega_influencer_df.loc[2,i] = 0
+                                new_mega_influencer_df.loc[0,i] = 1
 
                     # Am  I connected to the left mega-influencer?
                     if mega_influencer_df.loc[0,i] == 1:
@@ -599,10 +599,10 @@ class NetworkSimulation(ABC):
                         # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
-                            new_mega_influencer_df.loc[0,i] == 0
                             u = np.random.uniform(0,1)
                             if u < self.model.right_reach:
-                                new_mega_influencer_df.loc[2,i] == 1
+                                new_mega_influencer_df.loc[0,i] = 0
+                                new_mega_influencer_df.loc[2,i] = 1
                     
                 new_belief = new_belief / (n_edges + 1)
 
