@@ -37,7 +37,7 @@ class OpinionNetworkModel(ABC):
                 include_weight = True,
                 left_reach = 0.8,
                 right_reach = 0.8,
-                threshold = -1
+                threshold = -10
                 ):
         """Returns initialized OpinionNetworkModel.
             
@@ -66,7 +66,6 @@ class OpinionNetworkModel(ABC):
             right_reach: (float) this is the proportion of the susceptible population 
                 that the right mega-influencers will actually reach, must be between
                 0 and 1; this is p_R from [1] 
-
             threshold: (int) value below which opinions no longer change.
 
         Outputs: 
@@ -303,7 +302,7 @@ class OpinionNetworkModel(ABC):
         belief_df = agent_df.copy()
         power_law_exponent = self.power_law_exponent
         k = -1/(power_law_exponent)
-        modes = [i for i in range(len(self.probabilities))]
+        modes = np.linspace(-1,1,len(self.probabilities))
         
         assert np.sum(np.array(self.probabilities)) == 1, "Probabilities must sum to 1."
         
@@ -440,12 +439,12 @@ class OpinionNetworkModel(ABC):
             are the index of belief_df, where a 1 in row n column m indicates
             that influencer n reaches agent m.
         """
-        reach_dict = {0:self.left_reach, 2:self.right_reach}
-        mega_influencer_df = pd.DataFrame(0, index = [0,2], columns = list(
+        reach_dict = {-1:self.left_reach, 1:self.right_reach}
+        mega_influencer_df = pd.DataFrame(0, index = [-1,1], columns = list(
             belief_df.index))
         
         for i in mega_influencer_df.index:
-            ind = np.where(np.abs(belief_df["belief"] - i) != 2)[0]
+            ind = np.where(np.abs(belief_df["belief"] - i) <= self.openness_to_influencers)[0]
             U = np.random.uniform(0,1,len(ind))
             mega_influencer_df.loc[i,ind[np.where(U < reach_dict[i])[0]]] = 1
             
@@ -539,8 +538,8 @@ class NetworkSimulation(ABC):
         else:
             t = phases // 5
             plot_phases = [0] + [t * (i+1) for i in range(1,5)]
-        get_ridge_plot(df, plot_phases, reach_dict = {0:self.model.left_reach,
-                                                    2:self.model.right_reach})
+        get_ridge_plot(df, plot_phases, reach_dict = {-1:self.model.left_reach,
+                                                    1:self.model.right_reach})
         return None
 
 
@@ -577,32 +576,32 @@ class NetworkSimulation(ABC):
                 
                 if openness_to_influencers > 0:
                     # Am  I connected to the right mega-influencer?
-                    if mega_influencer_df.loc[2,i] == 1:
+                    if mega_influencer_df.loc[1,i] == 1:
                         # Do I listen to them?
-                        if np.abs(current_belief - 2) <= openness_to_influencers:
+                        if np.abs(current_belief - 1) <= openness_to_influencers:
                             n_edges = n_edges + 1
-                            new_belief = new_belief + 2
+                            new_belief = new_belief + 1
                         # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
                             u = np.random.uniform(0,1)
                             if u < self.model.left_reach:
-                                new_mega_influencer_df.loc[2,i] = 0
-                                new_mega_influencer_df.loc[0,i] = 1
+                                new_mega_influencer_df.loc[1,i] = 0
+                                new_mega_influencer_df.loc[-1,i] = 1
 
                     # Am  I connected to the left mega-influencer?
-                    if mega_influencer_df.loc[0,i] == 1:
+                    if mega_influencer_df.loc[-1,i] == 1:
                         # Do I listen to them?
-                        if np.abs(current_belief  - 0) <= openness_to_influencers:
+                        if np.abs(current_belief  - (-1)) <= openness_to_influencers:
                             n_edges = n_edges + 1
-                            new_belief = new_belief + 0
+                            new_belief = new_belief + (-1)
                         # If not, flip a biased coin to decide if my influencer connection
                         # changes affiliation.
                         else:
                             u = np.random.uniform(0,1)
                             if u < self.model.right_reach:
-                                new_mega_influencer_df.loc[0,i] = 0
-                                new_mega_influencer_df.loc[2,i] = 1
+                                new_mega_influencer_df.loc[-1,i] = 0
+                                new_mega_influencer_df.loc[1,i] = 1
                     
                 new_belief = new_belief / (n_edges + 1)
 
