@@ -8,6 +8,7 @@ geopy
 matplotlib
 notebook
 pandas
+pyarrow
 pysankey
 requests
 scipy
