@@ -571,9 +571,10 @@ def get_ridge_plot(dynamic_belief_df,
         ax_objs[-1].set_xlim(-2,2)
         if i == len(phases)-1:
             ax_objs[-1].set_xticks([-1,0,1])
-            ax_objs[-1].set_xticklabels(["Not Hesitant", 
+            ax_objs[-1].set_xticklabels([r"$\leftarrow$ Less Hesitant", 
                                         "Unsure",
-                                        "Strongly Hesitant"])
+                                        r"More Hesitant $\rightarrow$"])
+            ax_objs[-1].tick_params(axis='both', which='both', length=0)
         else:
             ax_objs[-1].set_xticks([])
             ax_objs[-1].set_xticklabels([])
