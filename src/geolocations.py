@@ -118,8 +118,8 @@ def get_county_mapping_data(county = None, state = None):
     df = df[(df["County or equivalent"] == county)&(df["State or equivalent"
         ] == full_state_name)]
 
-    geo_df["population (2019)"] = df["Population (2019 estimate)"].iloc[0]
-    geo_df["density"] = geo_df["population (2019)"]/geo_df["area (km^2)"]
+    geo_df["population (2020)"] = df["Population (2020 census)"].iloc[0]
+    geo_df["density"] = geo_df["population (2020)"]/geo_df["area (km^2)"]
 
     # Load vaccine hesitancy data.
     try: 
