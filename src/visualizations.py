@@ -586,8 +586,8 @@ def get_ridge_plot(dynamic_belief_df,
         
     
     gs.update(hspace=-0.7)
-    left = int(reach_dict[0] * 100)
-    right = int(reach_dict[2] *100)
+    left = int(reach_dict[-1] * 100)
+    right = int(reach_dict[1] *100)
     if show_title == True:
         plt.title("Left Reach: {}%    Right Reach: {}%".format(left, right), 
             y=-.4, fontweight = "bold")
