@@ -128,7 +128,7 @@ sim.plot_simulation_results()
 Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  For example, from the top level directory, run the following
 ```
 > cd scripts
-> python accepting_simulation.py
+> python accepting_simulation.py 1 #the int argument is the number of times to run the simulation
 ```
 to produce simulation results for Multnomah County, Oregon.
 
