@@ -309,16 +309,14 @@ class OpinionNetworkModel(ABC):
         belief_df["weight"] = np.random.uniform(0,1,belief_df.shape[0]) ** (k)
 
         means = np.linspace(-1,1,len(self.probabilities))
-        belief_df["belief"] = np.random.choice(means, belief_df.shape[0], 
-                                p = self.probabilities)
-        # TODO (AH): add sampling for initializaing belief.
-        # components = [i for i in range(len(means))]
-        # cov = np.abs((means[1] - means[0])/2)
-        # # Choose gmm component
-        # gmm_component = np.random.choice(components,belief_df.shape[0], p = self.probabilities)
-        # # Sample from gaussians by component
-        # belief = [np.random.normal(loc = means[c], scale = cov) for c in gmm_component]
-        # belief_df["belief"] = belief
+
+        components = [i for i in range(len(means))]
+        cov = np.abs((means[1] - means[0])/2)
+        # Choose gmm component
+        gmm_component = np.random.choice(components,belief_df.shape[0], p = self.probabilities)
+        # Sample from gaussians by component
+        belief = [np.random.normal(loc = means[c], scale = cov) for c in gmm_component]
+        belief_df["belief"] = belief
 
         belief_df["decile"] = pd.qcut(belief_df["weight"], q = 100, labels = [
                                 i for i in range(1,101)])
