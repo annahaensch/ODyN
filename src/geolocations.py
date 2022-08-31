@@ -38,10 +38,14 @@ def load_county_hesitancy_data(county = None, state = None, download_data = Fals
             "{}/data/{}_county_{}_hesitancy.csv".format(
             my_path, county.lower(), state.lower()), index_col = 0)
     else:
-        hesitancy_df = pd.read_csv(
-            "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
-        hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
-                        county.capitalize(), full_state_name.capitalize())]
+        try:
+            hesitancy_df = pd.read_csv(
+                "https://data.cdc.gov/api/views/q9mh-h2tw/rows.csv?accessType=DOWNLOAD")
+            hesitancy_df[hesitancy_df["County Name"] == "{} County, {}".format(
+                            county.capitalize(), full_state_name.capitalize())]
+        except:
+            raise ValueError("It looks like the cdc url is no longer active.  You can"+
+                "access an archived copy of the data at https://tinyurl.com/ODyNhesitancy")
 
     return hesitancy_df
 
