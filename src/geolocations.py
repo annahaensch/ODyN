@@ -17,7 +17,8 @@ import us
 
 logging.basicConfig(level=logging.WARNING)
 
-my_path = os.popen("git rev-parse --show-toplevel").read().strip("\n")
+with os.popen("git rev-parse --show-toplevel") as path:
+    my_path = path.read().strip("\n")
 
 def load_county_hesitancy_data(county = None, state = None, download_data = False):
     """ Return geodataframe with hesitancy data.
