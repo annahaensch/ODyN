@@ -552,7 +552,7 @@ def get_ridge_plot(dynamic_belief_df,
         x = dynamic_belief_df[phases[p]].values
         kde = stats.gaussian_kde(x)
         ax_objs[-1].plot(xx, kde(xx), color = SIM_CMAP(0))
-        c = int((p * 250) / (len(phases) -1))
+        c = int((p * 256) / (len(phases) -1))
         ax_objs[-1].fill_between(xx,kde(xx), color=SIM_CMAP(c), alpha = 0.8)
 
         ax_objs[-1].set_yticks([])
