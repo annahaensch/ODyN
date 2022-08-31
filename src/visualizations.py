@@ -4,6 +4,7 @@ import numpy as np
 from datetime import timedelta
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from pySankey.sankey import sankey
 from scipy import stats
 
 import geopandas as gpd
@@ -594,3 +595,39 @@ def get_ridge_plot(dynamic_belief_df,
             y=-.4, fontweight = "bold")
 
     return None
+
+
+def get_sankey_plot(dynamic_belief_df, vaccination_threshold, hesitant_threshold):
+    """ Create sankey plot of belief evolution
+    
+    Input:
+        dynamic_belief_df: (dataframe) showing changing beliefs over time
+        vaccination_threshold: (int) value below which individuals are considered 
+            vaccinated; this is typically, model.threshold.
+        hesitant_threshold: (int) this is the value above which individuals are 
+            considered hesitant.
+            
+    Output: 
+        Sankey plot showing vaccinated, willing, hesitant belief over time
+    """
+    end_df = dynamic_belief_df.iloc[:,-1]
+    end_df = end_df.sort_values(ascending = False)
+    end_df = pd.DataFrame(end_df.sort_values(ascending = False))
+    end_df = end_df.rename(columns = {end_df.columns[-1]:"value"})
+    end_df["class"] = "willing"
+    end_df.loc[end_df[end_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
+    end_df.loc[end_df[end_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
+    
+    start_df = dynamic_belief_df.iloc[:,0]
+    start_df = pd.DataFrame(start_df.loc[end_df.index])
+    start_df = start_df.rename(columns = {0:"value"})
+    start_df["class"] = "willing"
+    start_df.loc[start_df[start_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
+    start_df.loc[start_df[start_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
+    
+    colors = {"willing": "gold",
+              "hesitant": "tomato",
+              "vaccinated": "seagreen"
+                }
+
+    sankey(start_df["class"], end_df["class"], aspect=20, colorDict=colors, fontsize=12)
