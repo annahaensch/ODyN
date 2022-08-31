@@ -164,6 +164,8 @@ Feel free to download and adjust the code to customize the charts.
 
 # Data Sources
 
+All data needed for these simulations are available in the [data folder of this github repository](https://github.com/annahaensch/ODyN/tree/main/data) or in the case of large datasets, they are stored in a [public ODyN folder on Box](https://tufts.box.com/s/zswz021t98dobclsvv4q6a8nuq2ux2ik).  Original data sources are cited below.
+
 #### National Level Vaccination Trends
 
 Centers for Disease Control and Prevention. *Trends in Number of COVID-19 Vaccinations in the US*. [https://covid.cdc.gov/covid-data-tracker/#vaccination-trends](https://covid.cdc.gov/covid-data-tracker/#vaccination-trends). Last Accessed: December 8, 2021.
