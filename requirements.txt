@@ -1,0 +1,17 @@
+#
+##### ODyN requirements.txt
+#
+
+geojson
+geopandas
+geopy
+matplotlib
+notebook
+pandas
+pyarrow
+pysankey
+requests
+scipy
+seaborn
+us
+

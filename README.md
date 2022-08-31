@@ -8,6 +8,30 @@ This repository contains Opinion Dynamics Network (ODyN) tools and data to simul
 
 * [Covid-19 Vaccine Hesitancy and Mega-Influencers](https://arxiv.org/pdf/2202.00630.pdf), Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
 
+## Setting Up your ODyN Environment
+
+Before you get started, you'll need to create a new environment using `conda` (in case you need it, [installation guide here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)). If you use `conda` you can 
+create a new environment (we'll call it `odyn_env`) with
+
+```
+conda create --name odyn_env
+```
+
+and activate your new environment, with
+
+```
+conda activate odyn_env
+```
+To run the tools in the libarary will need to install the necessary dependencies. First you'll need to conda install 
+`pip` and then install the remaining required Python libraries as follows.
+
+```
+conda install pip
+pip install -U -r requirements.txt
+```
+
+Now your environment should be set up to run anything in this library. 
+
 ## Running Simulations with ODyN
 
 #### Load Geographic Data
@@ -104,7 +128,7 @@ sim.plot_simulation_results()
 Alternatively, this repository includes several built in scripts that can run simulations from the commmand line and print results to the data folder.  For example, from the top level directory, run the following
 ```
 > cd scripts
-> python accepting_simulation.py
+> python accepting_simulation.py 1 #the int argument is the number of times to run the simulation
 ```
 to produce simulation results for Multnomah County, Oregon.
 
@@ -139,6 +163,8 @@ odyn.relative_vaccine_trends_plot(county = "Multnomah",
 Feel free to download and adjust the code to customize the charts.
 
 # Data Sources
+
+All data needed for these simulations are available in the [data folder of this github repository](https://github.com/annahaensch/ODyN/tree/main/data) or in the case of large datasets, they are stored in a [public ODyN folder on Box](https://tufts.box.com/s/zswz021t98dobclsvv4q6a8nuq2ux2ik).  Original data sources are cited below.
 
 #### National Level Vaccination Trends
 

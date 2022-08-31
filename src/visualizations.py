@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 
 from datetime import timedelta
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from pySankey.sankey import sankey
+from scipy import stats
 
 import geopandas as gpd
-
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
-from scipy import stats
 
 from .geolocations import *
 
@@ -22,11 +24,13 @@ COLORS = {"light_orange":"#E69F00",
              "black":"#000000",
              "silver":"#DCDCDC"}
 
-COLOR_MAP = {
-        0:"#e7e1ef",
-        1:"#c994c7",
-        2:"#dd1c77"
-    }
+BELIEF_CMAP = LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cm.PuRd.name, a=0.1, b=0.7),
+        cm.PuRd(np.linspace(0.1, 0.7, 100)))
+
+SIM_CMAP = LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cm.BuGn.name, a=0.1, b=0.7),
+        cm.BuGn(np.linspace(0.1, 0.7, 100)))
 
 START_DATE = pd.to_datetime("2021-04-19")
 US_POPULATION = 329500000
@@ -430,13 +434,15 @@ def plot_agents_with_belief_and_weight(belief_df):
         Plot of points on triangle.
     """
     fig, ax = plt.subplots(figsize = (8,8))
-    ax.scatter(belief_df["x"], belief_df["y"],
-        s = [int(w) for w in belief_df["weight"].values],
-        c = [COLOR_MAP[b] for b in belief_df["belief"].values])
+    ax.scatter(x = belief_df["x"], 
+                y = belief_df["y"],
+                s = [int(w) for w in belief_df["weight"].values],
+                c = belief_df["belief"],
+                cmap = BELIEF_CMAP)
 
-    ax.scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
-    ax.scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
-    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")
+    ax.scatter([],[],color = BELIEF_CMAP(0), label = "Not Hesitant")
+    ax.scatter([],[],color = BELIEF_CMAP(128), label = "Hesitant or Unsure")
+    ax.scatter([],[],color = BELIEF_CMAP(256), label = "Strongly Hesitant")
     ax.set_axis_off()     
     plt.legend(loc = "best", prop={'size': 15})
     
@@ -461,9 +467,11 @@ def plot_network(model):
     cc = model.clustering_coefficient
     md = model.mean_degree
     # Plot people.
-    ax.scatter(belief_df["x"], belief_df["y"], 
-               s = [int(w) for w in belief_df["weight"].values],
-               c = [COLOR_MAP[b] for b in belief_df["belief"].values])
+    ax.scatter(x = belief_df["x"], 
+                y = belief_df["y"],
+                s = [int(w) for w in belief_df["weight"].values],
+                c = belief_df["belief"],
+                cmap = BELIEF_CMAP)
 
     for j in belief_df.index:
         for k in np.where(adjacency_df.loc[j,:] == 1)[0]:
@@ -495,9 +503,9 @@ def plot_network(model):
     ax.set_title(title)
         
     # Add legend
-    ax.scatter([],[],color = COLOR_MAP[0], label = "Not Hesitant")
-    ax.scatter([],[],color = COLOR_MAP[1], label = "Hesitant or Unsure")
-    ax.scatter([],[],color = COLOR_MAP[2], label = "Strongly Hesitant")     
+    ax.scatter([],[],color = BELIEF_CMAP(0), label = "Not Hesitant")
+    ax.scatter([],[],color = BELIEF_CMAP(128), label = "Hesitant or Unsure")
+    ax.scatter([],[],color = BELIEF_CMAP(256), label = "Strongly Hesitant")    
     plt.legend(loc = "best")
     plt.axis()
 
@@ -531,9 +539,7 @@ def get_ridge_plot(dynamic_belief_df,
             t = phases // 5
             phases = [0] + [t * (i+1) for i in range(1,5)]
 
-    c = ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c']
-    xx = np.linspace(0, 2, 1000)
-
+    xx = np.linspace(-2,2,1000)
     gs = grid_spec.GridSpec(len(phases),1)
     fig = plt.figure(figsize=(8,4))
 
@@ -545,8 +551,9 @@ def get_ridge_plot(dynamic_belief_df,
         ax_objs.append(fig.add_subplot(gs[i:i+1, 0:]))
         x = dynamic_belief_df[phases[p]].values
         kde = stats.gaussian_kde(x)
-        ax_objs[-1].plot(xx, kde(xx), color = c[0])
-        ax_objs[-1].fill_between(xx,kde(xx), color=c[p], alpha = 0.8)
+        ax_objs[-1].plot(xx, kde(xx), color = SIM_CMAP(0))
+        c = int((p * 256) / (len(phases) -1))
+        ax_objs[-1].fill_between(xx,kde(xx), color=SIM_CMAP(c), alpha = 0.8)
 
         ax_objs[-1].set_yticks([])
         ax_objs[-1].set_yticklabels([])
@@ -562,11 +569,13 @@ def get_ridge_plot(dynamic_belief_df,
         rect = ax_objs[-1].patch
         rect.set_alpha(0)
 
+        ax_objs[-1].set_xlim(-2,2)
         if i == len(phases)-1:
-            ax_objs[-1].set_xticks([0,1,2])
-            ax_objs[-1].set_xticklabels([0, 
-                                        1,
-                                        2])
+            ax_objs[-1].set_xticks([-1,0,1])
+            ax_objs[-1].set_xticklabels([r"$\leftarrow$ Less Hesitant", 
+                                        "Unsure",
+                                        r"More Hesitant $\rightarrow$"])
+            ax_objs[-1].tick_params(axis='both', which='both', length=0)
         else:
             ax_objs[-1].set_xticks([])
             ax_objs[-1].set_xticklabels([])
@@ -579,10 +588,46 @@ def get_ridge_plot(dynamic_belief_df,
         
     
     gs.update(hspace=-0.7)
-    left = int(reach_dict[0] * 100)
-    right = int(reach_dict[2] *100)
+    left = int(reach_dict[-1] * 100)
+    right = int(reach_dict[1] *100)
     if show_title == True:
         plt.title("Left Reach: {}%    Right Reach: {}%".format(left, right), 
             y=-.4, fontweight = "bold")
 
     return None
+
+
+def get_sankey_plot(dynamic_belief_df, vaccination_threshold, hesitant_threshold):
+    """ Create sankey plot of belief evolution
+    
+    Input:
+        dynamic_belief_df: (dataframe) showing changing beliefs over time
+        vaccination_threshold: (int) value below which individuals are considered 
+            vaccinated; this is typically, model.threshold.
+        hesitant_threshold: (int) this is the value above which individuals are 
+            considered hesitant.
+            
+    Output: 
+        Sankey plot showing vaccinated, willing, hesitant belief over time
+    """
+    end_df = dynamic_belief_df.iloc[:,-1]
+    end_df = end_df.sort_values(ascending = False)
+    end_df = pd.DataFrame(end_df.sort_values(ascending = False))
+    end_df = end_df.rename(columns = {end_df.columns[-1]:"value"})
+    end_df["class"] = "willing"
+    end_df.loc[end_df[end_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
+    end_df.loc[end_df[end_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
+    
+    start_df = dynamic_belief_df.iloc[:,0]
+    start_df = pd.DataFrame(start_df.loc[end_df.index])
+    start_df = start_df.rename(columns = {0:"value"})
+    start_df["class"] = "willing"
+    start_df.loc[start_df[start_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
+    start_df.loc[start_df[start_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
+    
+    colors = {"willing": "gold",
+              "hesitant": "tomato",
+              "vaccinated": "seagreen"
+                }
+
+    sankey(start_df["class"], end_df["class"], aspect=20, colorDict=colors, fontsize=12)
