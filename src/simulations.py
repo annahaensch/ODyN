@@ -35,6 +35,7 @@ class OpinionNetworkModel(ABC):
                 importance_of_distance = 8.5,
                 include_opinion = True,
                 include_weight = True,
+                include_distance = True,
                 left_reach = 0.8,
                 right_reach = 0.8,
                 threshold = -10
@@ -44,6 +45,8 @@ class OpinionNetworkModel(ABC):
         Inputs:
             probabilities: (list) probabilities of each mode; these are the 
                 values "p_0,p_1,p_2" from [1].
+            density: (int) number of agents per unit square.  
+            model: (str) either "triangular" or "spherical".
             power_law_exponent: (float) exponent of power law, must be > 0; 
                 this is "gamma" from [1].
             openness_to_neighbors: (float) maximum inter-mode distance that agents
@@ -59,6 +62,8 @@ class OpinionNetworkModel(ABC):
             include_opinion: (boolean) If True, include distance in opinion space 
                 in the probability measure.
             include_weight: (boolean) If True, include influencer weight in the 
+                probability measure.
+            include_distance: (boolean) If True, include pairwise distance in the 
                 probability measure.
             left_reach: (float) this is the proportion of the susceptible population 
                 that the left mega-influencers will actually reach, must be between
@@ -80,6 +85,7 @@ class OpinionNetworkModel(ABC):
         self.importance_of_distance = importance_of_distance
         self.include_opinion = include_opinion
         self.include_weight = include_weight
+        self.include_distance = include_distance
         self.left_reach = left_reach
         self.right_reach = right_reach
         self.threshold = threshold
@@ -93,7 +99,51 @@ class OpinionNetworkModel(ABC):
         self.clustering_coefficient = 0
         self.mean_degree = 0
 
-    def populate_model(self, num_agents = None, geo_df = None, bounding_box = None, show_plot = False):
+    def populate_model(self, num_agents = None, show_plot = False):
+        """ Fully initialized but untrained OpinionNetworkModel instance.
+
+        Input:
+            num_agents: (int) number of agents to plot.
+            show_plot: (bool) if true then plot is shown. 
+        
+        Output: 
+            OpinionNetworkModel instance.
+        """
+        agent_df = self.add_random_agents_to_triangle(num_agents = num_agents,
+                                            show_plot = False)
+
+        logging.info("\n {} agents added.".format(agent_df.shape[0]))
+        
+        belief_df = self.assign_weights_and_beliefs(agent_df)
+        logging.info("\n Weights and beliefs assigned.")
+
+        prob_df = self.compute_probability_array(belief_df)
+        adjacency_df = self.compute_adjacency(prob_df)
+        logging.info("\n Adjacencies computed.")
+
+        # Connect mega-influencers
+        mega_influencer_df = self.connect_mega_influencers(belief_df)
+        
+        # Compute network statistics.
+        logging.info("\n Computing network statistics...")
+        cc, md = self.compute_network_stats(adjacency_df)
+        logging.info("\n Clustering Coefficient: {}".format(cc))
+        logging.info("\n Mean Degree: {}".format(md))
+
+        self.agent_df = agent_df
+        self.belief_df = belief_df
+        self.prob_df = prob_df
+        self.adjacency_df = adjacency_df
+        self.mega_influencer_df = mega_influencer_df
+        self.clustering_coefficient = cc
+        self.mean_degree = md
+        
+        if show_plot == True:
+            self.plot_initial_network()
+
+        return None
+
+    def populate_model_with_geography(self, num_agents = None, geo_df = None, bounding_box = None, show_plot = False):
         """ Fully initialized but untrained OpinionNetworkModel instance.
 
         Input:
@@ -105,17 +155,20 @@ class OpinionNetworkModel(ABC):
             show_plot: (bool) if true then plot is shown. 
         
         Output: 
-            OpinionNetworkModel instance.
+            OpinionNetworkModel instance where underying population has 
+            geopspatial connections.
         """
         if bounding_box is None:
-            agent_df = self.add_random_agents_to_triangle(num_agents = num_agents, 
+            agent_df = self.add_random_agents_to_triangle_with_geography(
+                                                        num_agents = num_agents, 
                                                         geo_df = geo_df,
                                                         show_plot = False)
         else:
             if geo_df is None:
                 raise ValueError("If a bounding box is specified, then a "
                     "geo_df must also be given.")
-            agent_df = self.add_random_agents_to_triangles(geo_df = geo_df, 
+            agent_df = self.add_random_agents_to_triangles_with_geography(
+                                                        geo_df = geo_df, 
                                                         bounding_box = bounding_box, 
                                                         show_plot = False)
 
@@ -154,7 +207,50 @@ class OpinionNetworkModel(ABC):
         plot_network(self)
         return None
 
-    def add_random_agents_to_triangle(self, num_agents, geo_df = None, triangle_object = None, 
+    def add_random_agents_to_triangle(self, num_agents, show_plot = False):
+        """ Assign N points on a triangle using Poisson point process.
+        
+        Input:
+            num_agents: (int) number of agents to add to the triangle.  If None, 
+                then agents are added according to density.
+            show_plot: (bool) if true then plot is shown. 
+
+        Returns: 
+            An num_agents x 2 dataframe of point coordinates.
+        """ 
+        v1 = [0,0]
+        v2 = [1000,0]
+        v3 = [.5 * 1000, .5 * np.sqrt(3) * 1000]
+
+        triangle_object = Polygon([v1, v2, v3, v1])
+        bnd = list(triangle_object.boundary.coords)
+      
+        # Get Vertices
+        V1 = np.array(bnd[0])
+        V2 = np.array(bnd[1])
+        V3 = np.array(bnd[2])
+        
+        # Sample from uniform distribution on [0,1]
+        U = np.random.uniform(0,1,num_agents)
+        V = np.random.uniform(0,1,num_agents)
+        
+        UU = np.where(U + V > 1, 1-U, U)
+        VV = np.where(U + V > 1, 1-V, V) 
+        
+        # Shift triangle into origin and and place points.
+        agents = (UU.reshape(len(UU),-1) * (V2 - V1).reshape(-1,2)) + (
+                                VV.reshape(len(VV),-1) * (V3 - V1).reshape(-1,2))
+        
+        # Shift points back to original position.
+        agents = agents + V1.reshape(-1,2)
+        agent_df = pd.DataFrame(agents, columns = ["x","y"])
+    
+        if show_plot == True:
+            plot_agents_on_triangle(triangle_object, agent_df)
+
+        return agent_df
+
+    def add_random_agents_to_triangle_with_geography(self, num_agents, geo_df = None, triangle_object = None, 
         show_plot = False):
         """ Assign N points on a triangle using Poisson point process.
         
@@ -166,7 +262,8 @@ class OpinionNetworkModel(ABC):
             show_plot: (bool) if true then plot is shown. 
 
         Returns: 
-            An num_agents x 2 dataframe of point coordinates.
+            An num_agents x 2 dataframe of point coordinates where point values 
+            have an underlying geospatial meaning.
         """ 
         if triangle_object is None:
             # If no triangle is given, initialize triangle with area 1 km^2.       
@@ -221,8 +318,8 @@ class OpinionNetworkModel(ABC):
 
         return agent_df
 
-    def add_random_agents_to_triangles(self, geo_df, bounding_box = None, show_plot = False):
-        """ Plots county with triangular regions.
+    def add_random_agents_to_triangles_with_geography(self, geo_df, bounding_box = None, show_plot = False):
+        """ Plots county with triangular regions with correspding geospatial info.
         
         Inputs: 
             geo_df: (dataframe) geographic datatframe including county geometry.
@@ -267,7 +364,7 @@ class OpinionNetworkModel(ABC):
             num_agents = int(area * geo_df.loc[0,"density"])
             df = pd.DataFrame(columns = ["x","y"])
             if num_agents > 0:
-                df = self.add_random_agents_to_triangle(num_agents, 
+                df = self.add_random_agents_to_triangle_with_geography(num_agents, 
                                                     geo_df = geo_df,
                                                     triangle_object = tri_df.loc[i,"geometry"],  
                                                     show_plot = False)
@@ -341,24 +438,25 @@ class OpinionNetworkModel(ABC):
         n = belief_df.index.shape[0]
         prob_array = np.ones((n,n))
         
-        dist_array = np.zeros((n,n)) 
-        for i in range(n):
-            point_i = Point(belief_df.loc[i,"x"],belief_df.loc[i,"y"])
+        # Prioritize connections to people close in physical space.
+        if self.include_distance == True: 
+            dist_array = np.zeros((n,n))
+            for i in range(n):
+                point_i = Point(belief_df.loc[i,"x"],belief_df.loc[i,"y"])
 
-            # Get distances from i to each other point.
-            dist_array[i,:] = [point_i.distance(Point(belief_df.loc[j,"x"],
-                                                       belief_df.loc[j,"y"])
-                                                    ) for j in belief_df.index]
-            
-        # Compute the dimensionless distance metric.
-        diam = dist_array.max().max()
-        lam = (self.distance_scaling_factor * diam)
-        delta = -1 * self.importance_of_distance
-        
-        dist_array = np.where(dist_array == 0,np.nan, dist_array)
-        dist_array = (1 + (dist_array/lam)) ** delta
-        
-        prob_array = prob_array * dist_array 
+                # Get distances from i to each other point.
+                dist_array[i,:] = [point_i.distance(Point(belief_df.loc[j,"x"],
+                    belief_df.loc[j,"y"])) for j in belief_df.index]
+
+            # Compute the dimensionless distance metric.
+            diam = dist_array.max().max()
+            lam = (self.distance_scaling_factor * diam)
+            delta = -1 * self.importance_of_distance
+
+            dist_array = np.where(dist_array == 0,np.nan, dist_array)
+            dist_array = (1 + (dist_array/lam)) ** delta
+
+            prob_array = prob_array * dist_array 
         
         # Only allow connections to people close in opinion space.
         if self.include_opinion == True:
@@ -378,7 +476,7 @@ class OpinionNetworkModel(ABC):
 
         # Incentivize connections with heavily weighted people.
         if self.include_weight == True:
-            wt_array = belief_df["weight"] ** self.importance_of_weight
+            wt_array = (belief_df["weight"] - belief_df["weight"].min()) ** self.importance_of_weight
             wt_array = wt_array.values.reshape(-1,1)
             
             prob_array = prob_array * wt_array
@@ -397,7 +495,7 @@ class OpinionNetworkModel(ABC):
                 probabiltiy of influce row n on column m.
 
         Outputs: 
-            Dataframe where row n and column n is a 1 if n influces m, 
+            Dataframe where row n and column m is a 1 if n influences m, 
             and a 0 otherwise.
         """
         adjacency_df = pd.DataFrame(0,index = [int(i) for i in prob_df.index], 
