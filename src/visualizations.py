@@ -455,8 +455,6 @@ def plot_network(model):
     """
     # Load point df.
     belief_df = model.belief_df
-
-    fig, ax = plt.subplots(figsize = (8,8))
     
     op = model.include_opinion
     wt = model.include_weight
@@ -467,6 +465,7 @@ def plot_network(model):
     cc = model.clustering_coefficient
     md = model.mean_degree
     # Plot people.
+    fig, ax = plt.subplots(figsize = (8,8))
     ax.scatter(x = belief_df["x"], 
                 y = belief_df["y"],
                 s = [int(w) for w in belief_df["weight"].values],
@@ -597,15 +596,17 @@ def get_ridge_plot(dynamic_belief_df,
     return None
 
 
-def get_sankey_plot(dynamic_belief_df, vaccination_threshold, hesitant_threshold):
+def get_sankey_plot(dynamic_belief_df, start_hesitant,vaccination_threshold, hesitant_threshold, figure_name):
     """ Create sankey plot of belief evolution
     
     Input:
         dynamic_belief_df: (dataframe) showing changing beliefs over time
+        start_hesotamt: (int) percentage of population that starts hesitant.
         vaccination_threshold: (int) value below which individuals are considered 
             vaccinated; this is typically, model.threshold.
         hesitant_threshold: (int) this is the value above which individuals are 
             considered hesitant.
+        figure_name: (str) filepath to save figure.
             
     Output: 
         Sankey plot showing vaccinated, willing, hesitant belief over time
@@ -623,18 +624,22 @@ def get_sankey_plot(dynamic_belief_df, vaccination_threshold, hesitant_threshold
     end_df.loc[end_df[end_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
     end_df.loc[end_df[end_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
     end_dict = (end_df["class"].value_counts()/end_df.shape[0]).to_dict()
-    for k,v in end_dict.items():
-        end_df["class"] = end_df["class"].replace(k,k + " ({:.1f}%)".format(100 *v))
-        colors[k + " ({:.1f}%)".format(100 *v)] = base_colors[k]
+    for k in ["vaccinated","willing","hesitant"]:
+        if k in end_dict.keys():
+            v = str(int(100 * end_dict[k]))
+            end_df["class"] = end_df["class"].replace(k,v)
+            colors[v] = base_colors[k]
         
     start_df = dynamic_belief_df.iloc[:,0]
     start_df = pd.DataFrame(start_df.loc[end_df.index])
     start_df = start_df.rename(columns = {0:"value"})
-    start_df["class"] = "willing"
-    start_df.loc[start_df[start_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
+    start_df["class"] = str(100 - start_hesitant)
+    start_df.loc[start_df[start_df["value"] > hesitant_threshold].index,"class"] = str(31)
     start_dict = (start_df["class"].value_counts()/start_df.shape[0]).to_dict()
-    for k,v in start_dict.items():
-        start_df["class"] = start_df["class"].replace(k,k + " ({:.1f}%)".format(100 *v))
-        colors[k + " ({:.1f}%)".format(100 *v)] = base_colors[k]
+    colors[str(100 - start_hesitant)] = "gold"
+    colors[str(start_hesitant)] = "tomato"
 
-    sankey(start_df["class"], end_df["class"], aspect=20, colorDict=colors, fontsize=12)
+    sankey(left = start_df["class"], right = end_df["class"], aspect=20, colorDict=colors, fontsize=20)
+    plt.gcf().set_size_inches(6,6)
+    plt.savefig(f'{figure_name}.png',bbox_inches='tight',dpi=150)
+    plt.close()
