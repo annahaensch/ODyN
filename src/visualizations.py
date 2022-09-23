@@ -634,7 +634,7 @@ def get_sankey_plot(dynamic_belief_df, start_hesitant,vaccination_threshold, hes
     start_df = pd.DataFrame(start_df.loc[end_df.index])
     start_df = start_df.rename(columns = {0:"value"})
     start_df["class"] = str(100 - start_hesitant)
-    start_df.loc[start_df[start_df["value"] > hesitant_threshold].index,"class"] = str(31)
+    start_df.loc[start_df[start_df["value"] > hesitant_threshold].index,"class"] = str(start_hesitant)
     start_dict = (start_df["class"].value_counts()/start_df.shape[0]).to_dict()
     colors[str(100 - start_hesitant)] = "gold"
     colors[str(start_hesitant)] = "tomato"
