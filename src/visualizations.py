@@ -4,6 +4,7 @@ import numpy as np
 from datetime import timedelta
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.patches import Rectangle
 from pySankey.sankey import sankey
 from scipy import stats
 
@@ -596,10 +597,66 @@ def get_ridge_plot(dynamic_belief_df,
     return None
 
 
-def get_sankey_plot(dynamic_belief_df, start_hesitant,vaccination_threshold, hesitant_threshold, figure_name):
-    """ Create sankey plot of belief evolution
-    
+def get_line_plot_axis(ax, dynamic_belief_df):
+    """ Get line plot on axis object.
+
     Input:
+        ax: (axis object) on which to place alluvial plot.
+        dynamic_belief_df: (dataframe) showing changing beliefs over time
+
+    Return: 
+        Returns line plot of all agents evolving over time.
+    """
+    hfont = {'fontname':'DejaVu Sans'}
+    m = dynamic_belief_df.iloc[:,0].min()
+    M = dynamic_belief_df.iloc[:,0].max()
+    cmap_linspace = np.linspace(m, M, 100)
+    colors = plt.cm.viridis(cmap_linspace)
+
+    for i in dynamic_belief_df.index:
+        c = np.where(cmap_linspace <= dynamic_belief_df.iloc[i,0])[0][-1]
+        ax.plot(dynamic_belief_df.loc[i,:], color = colors[c])
+        ax.set_xlabel("Belief", **hfont)
+        ax.set_xlabel("Timesteps", **hfont)
+        
+    return ax
+    
+def _sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def _calc_sigmoid_line(width, y_start, y_end):
+    xs = np.linspace(-5, 5, num=50)
+    ys = np.array([_sigmoid(x) for x in xs])
+    xs = xs / 10 + 0.5 
+    xs *= width
+    ys = y_start + (y_end - y_start) * ys
+    return xs, ys
+
+def _get_wide_df(dynamic_belief_df, vaccination_threshold = -1, hesitant_threshold = 0):
+    df = pd.DataFrame(index = dynamic_belief_df.index)
+    for c in dynamic_belief_df.columns:
+        if c == 0:
+            df["initial belief"] =  np.where(dynamic_belief_df.loc[:,c] > hesitant_threshold, "hesitant", "willing")
+        if c == dynamic_belief_df.columns[-1]:
+            df["final belief"] = "willing"
+            hes_idx = np.where(dynamic_belief_df.loc[:,c] > hesitant_threshold)[0]
+            df.loc[hes_idx,"final belief"] =  "hesitant"
+            vac_idx = np.where(dynamic_belief_df.loc[:,c] <= vaccination_threshold)[0]
+            df.loc[vac_idx,"final belief"] =  "vaccinated"
+
+    df["freq"] = 1
+
+    wide_df = df[["initial belief", "final belief","freq"]].groupby(["initial belief", "final belief"], as_index=False).sum()
+    wide_df["freq"] = wide_df["freq"] / wide_df["freq"].sum()
+    
+    return wide_df
+
+def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold, 
+                        hesitant_threshold):
+    """ Return alluvial plot on axis.
+
+    Input:
+        ax: (axis object) on which to place alluvial plot.
         dynamic_belief_df: (dataframe) showing changing beliefs over time
         start_hesotamt: (int) percentage of population that starts hesitant.
         vaccination_threshold: (int) value below which individuals are considered 
@@ -609,37 +666,120 @@ def get_sankey_plot(dynamic_belief_df, start_hesitant,vaccination_threshold, hes
         figure_name: (str) filepath to save figure.
             
     Output: 
-        Sankey plot showing vaccinated, willing, hesitant belief over time
-    """
-    colors = {}
-    base_colors = {"willing": "gold",
-              "hesitant": "tomato",
-              "vaccinated": "seagreen"
-                }
-    end_df = dynamic_belief_df.iloc[:,-1]
-    end_df = end_df.sort_values(ascending = False)
-    end_df = pd.DataFrame(end_df.sort_values(ascending = False))
-    end_df = end_df.rename(columns = {end_df.columns[-1]:"value"})
-    end_df["class"] = "willing"
-    end_df.loc[end_df[end_df["value"] <= vaccination_threshold].index,"class"] = "vaccinated"
-    end_df.loc[end_df[end_df["value"] >= hesitant_threshold].index,"class"] = "hesitant"
-    end_dict = (end_df["class"].value_counts()/end_df.shape[0]).to_dict()
-    for k in ["vaccinated","willing","hesitant"]:
-        if k in end_dict.keys():
-            v = str(int(100 * end_dict[k]))
-            end_df["class"] = end_df["class"].replace(k,v)
-            colors[v] = base_colors[k]
-        
-    start_df = dynamic_belief_df.iloc[:,0]
-    start_df = pd.DataFrame(start_df.loc[end_df.index])
-    start_df = start_df.rename(columns = {0:"value"})
-    start_df["class"] = str(100 - start_hesitant)
-    start_df.loc[start_df[start_df["value"] > hesitant_threshold].index,"class"] = str(start_hesitant)
-    start_dict = (start_df["class"].value_counts()/start_df.shape[0]).to_dict()
-    colors[str(100 - start_hesitant)] = "gold"
-    colors[str(start_hesitant)] = "tomato"
+        Alluvial plot showing vaccinated, willing, hesitant belief over time
 
-    sankey(left = start_df["class"], right = end_df["class"], aspect=20, colorDict=colors, fontsize=20)
-    plt.gcf().set_size_inches(6,6)
-    plt.savefig(f'{figure_name}.png',bbox_inches='tight',dpi=150)
-    plt.close()
+    """
+    wide_df = _get_wide_df(dynamic_belief_df, vaccination_threshold, hesitant_threshold)
+    hfont = {'fontname':'DejaVu Sans'}
+    cmap = {"hesitant":"tomato","willing":"gold","vaccinated":"seagreen"}
+    y_end = 0
+    y_hesitant_start = 0
+    y_willing_start = wide_df[wide_df["initial belief"] == "hesitant"]["freq"].sum() + .1
+    for final in ["hesitant","willing","vaccinated"]:
+
+        for initial in ["hesitant","willing"]:
+            idx = wide_df[(wide_df["final belief"] == final)&(
+                wide_df["initial belief"] == initial)].index
+            if len(idx) > 0:
+                idx = idx[0]
+                height = wide_df.loc[idx,"freq"]
+                if initial == "hesitant":
+
+                    xs, ys_under = _calc_sigmoid_line(1, 
+                                                 y_start = y_hesitant_start, 
+                                                 y_end = y_end)
+                    y_hesitant_start += wide_df.loc[idx,"freq"]
+
+                if initial == "willing":
+
+                    xs, ys_under = _calc_sigmoid_line(1, 
+                                                 y_start = y_willing_start, 
+                                                 y_end = y_end)
+                    y_willing_start +=  wide_df.loc[idx,"freq"]
+
+                ax.plot(xs, ys_under, color = cmap[final], alpha = .7, zorder = 0)
+                ax.fill_between(xs, ys_under, ys_under + height, color = cmap[final], 
+                                alpha = .7, zorder = 0)
+
+                y_end += height
+
+        y_end += .05
+    ## Right hand annotations
+    hesitant_rect_height = wide_df[wide_df["final belief"] == "hesitant"
+                                ]["freq"].sum()
+    ax.add_patch(Rectangle((1, 0),
+                            .05, 
+                            hesitant_rect_height,
+                            edgecolor = "tomato", 
+                            facecolor = "tomato", 
+                            lw = 2,
+                            zorder = 1))
+    text = f"{np.around(100 * hesitant_rect_height, decimals = 1)}"
+    ax.annotate(text = text, 
+                xy = (1.1,.5* hesitant_rect_height), 
+                fontsize = 10, 
+                ha = "left", 
+                va = "center",
+                **hfont)
+
+    willing_rect_height = wide_df[wide_df["final belief"] == "willing"
+                                    ]["freq"].sum()
+    ax.add_patch(Rectangle((1, hesitant_rect_height + .05), 
+                            .05, 
+                            willing_rect_height,
+                            edgecolor = "gold", 
+                            facecolor = "gold", 
+                            lw = 2,
+                            zorder = 1))
+    text = f"{np.around(100 * willing_rect_height, decimals = 1)}"
+    ax.annotate(text = text, 
+                xy = (1.1,hesitant_rect_height + .05 + .5* willing_rect_height), 
+                fontsize = 10, 
+                ha = "left", 
+                va = "center",
+                **hfont)
+
+    vaccinated_rect_height = wide_df[wide_df["final belief"] == "vaccinated"]["freq"].sum()
+    ax.add_patch(Rectangle((1, hesitant_rect_height + willing_rect_height + .1), 
+                            .05, 
+                            vaccinated_rect_height,
+                            edgecolor = "seagreen", 
+                            facecolor = "seagreen", 
+                            lw = 2,
+                            zorder = 1))
+    
+    text = f"{np.around(100 * vaccinated_rect_height, decimals = 1)}"
+    ax.annotate(text = text, 
+                xy = (1.1,hesitant_rect_height + willing_rect_height + .1 + .5* vaccinated_rect_height), 
+                fontsize = 10, 
+                ha = "left", 
+                va = "center",
+                **hfont)
+    
+    # Left hand annotations
+    hesitant_rect_height = wide_df[wide_df["initial belief"] == "hesitant"]["freq"].sum()
+    ax.add_patch(Rectangle((0, 0), 
+                            .05, 
+                            hesitant_rect_height,
+                            edgecolor = "tomato", 
+                            facecolor = "tomato", 
+                            lw = 2,
+                            zorder = 1))
+    
+    willing_rect_height = wide_df[wide_df["initial belief"] == "willing"]["freq"].sum()
+    ax.add_patch(Rectangle((0, hesitant_rect_height + .1), 
+                            .05, 
+                            willing_rect_height,
+                            edgecolor = "gold", 
+                            facecolor = "gold", 
+                            lw = 2,
+                            zorder = 1))
+    
+    ax.spines.top.set_visible(False)
+    ax.spines.left.set_visible(False)
+    ax.spines.right.set_visible(False)
+    ax.set_yticks([])
+    ax.set_xticks([0 + 0.025,1 + 0.025])
+    ax.set_xticklabels(["initial","final"], fontsize = 12, **hfont)
+
+    return ax
