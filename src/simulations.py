@@ -408,7 +408,7 @@ class OpinionNetworkModel(ABC):
         means = np.linspace(-1,1,len(self.probabilities))
 
         components = [i for i in range(len(means))]
-        cov = np.abs((means[1] - means[0])/2)
+        cov = 0.5#np.abs((means[1] - means[0])/2)
         # Choose gmm component
         gmm_component = np.random.choice(components,belief_df.shape[0], p = self.probabilities)
         # Sample from gaussians by component
@@ -601,7 +601,8 @@ class NetworkSimulation(ABC):
                             adjacency_df = new_adjacency_df,
                             openness_to_influencers = model.openness_to_influencers,
                             mega_influencer_df = new_mega_influencer_df, 
-                            threshold = model.threshold)
+                            threshold = model.threshold,
+                            iteration_number = i)
 
             phase_dict["belief_df"] = new_belief_df
             prob_df = model.compute_probability_array(new_belief_df)
@@ -655,14 +656,18 @@ class NetworkSimulation(ABC):
                         adjacency_df,
                         openness_to_influencers,
                         mega_influencer_df, 
-                        threshold):
+                        threshold, 
+                        iteration_number):
         """ Returns updated belief_df.
         Inputs: 
             belief_df: (dataframe)
             adjacency_df: (dataframe)
             openness_to_influencers: (float) distance in opinion space that 
                 mega-influencers can reach; this is "epsilon" from [1].
+            mega_influencer_df: (dataframe) rows show connection to mega-influencers
+                as binary values.
             threshold: (int) value below which opinions no longer change.
+            iteration_number: (int) counter
 
         Returns: 
             Updated belief_df after one round of Hegselmann-Krause.
@@ -673,8 +678,11 @@ class NetworkSimulation(ABC):
         for i in belief_df.index:
             current_belief = belief_df.loc[belief_df.index[i], "belief"]
 
-            if current_belief > threshold:
+            # After 10 iterations, only update agents with beliefs above threshold.
+            if (current_belief < threshold) & (iteration_number >= 10):
+                pass
                 
+            else:
                 # Sum over column
                 edges = np.where(adjacency_df[i] == 1)[0]
                 n_edges = len(edges)
