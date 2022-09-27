@@ -616,9 +616,12 @@ def get_line_plot_axis(ax, dynamic_belief_df):
     for i in dynamic_belief_df.index:
         c = np.where(cmap_linspace <= dynamic_belief_df.iloc[i,0])[0][-1]
         ax.plot(dynamic_belief_df.loc[i,:], color = colors[c])
-        ax.set_xlabel("Belief", **hfont)
-        ax.set_xlabel("Timesteps", **hfont)
+        ax.set_ylabel("Belief", fontsize = 12, **hfont)
+        ax.set_xlabel("Timesteps", fontsize = 12, **hfont)
         
+    ax.spines.top.set_visible(False)
+    ax.spines.right.set_visible(False)
+
     return ax
     
 def _sigmoid(x):
@@ -671,7 +674,7 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
     """
     wide_df = _get_wide_df(dynamic_belief_df, vaccination_threshold, hesitant_threshold)
     hfont = {'fontname':'DejaVu Sans'}
-    cmap = {"hesitant":"tomato","willing":"gold","vaccinated":"seagreen"}
+    cmap = {"hesitant":"chocolate","willing":"silver","vaccinated":"slategrey"}
     y_end = 0
     y_hesitant_start = 0
     y_willing_start = wide_df[wide_df["initial belief"] == "hesitant"]["freq"].sum() + .1
@@ -704,17 +707,18 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
                 y_end += height
 
         y_end += .05
+
     ## Right hand annotations
     hesitant_rect_height = wide_df[wide_df["final belief"] == "hesitant"
                                 ]["freq"].sum()
     ax.add_patch(Rectangle((1, 0),
                             .05, 
                             hesitant_rect_height,
-                            edgecolor = "tomato", 
-                            facecolor = "tomato", 
+                            edgecolor = cmap["hesitant"], 
+                            facecolor = cmap["hesitant"], 
                             lw = 2,
                             zorder = 1))
-    text = f"{np.around(100 * hesitant_rect_height, decimals = 1)}"
+    text = f"{np.around(100 * hesitant_rect_height, decimals = 1)}%"
     ax.annotate(text = text, 
                 xy = (1.1,.5* hesitant_rect_height), 
                 fontsize = 10, 
@@ -727,11 +731,11 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
     ax.add_patch(Rectangle((1, hesitant_rect_height + .05), 
                             .05, 
                             willing_rect_height,
-                            edgecolor = "gold", 
-                            facecolor = "gold", 
+                            edgecolor = cmap["willing"], 
+                            facecolor = cmap["willing"], 
                             lw = 2,
                             zorder = 1))
-    text = f"{np.around(100 * willing_rect_height, decimals = 1)}"
+    text = f"{np.around(100 * willing_rect_height, decimals = 1)}%"
     ax.annotate(text = text, 
                 xy = (1.1,hesitant_rect_height + .05 + .5* willing_rect_height), 
                 fontsize = 10, 
@@ -743,12 +747,12 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
     ax.add_patch(Rectangle((1, hesitant_rect_height + willing_rect_height + .1), 
                             .05, 
                             vaccinated_rect_height,
-                            edgecolor = "seagreen", 
-                            facecolor = "seagreen", 
+                            edgecolor = cmap["vaccinated"], 
+                            facecolor = cmap["vaccinated"], 
                             lw = 2,
                             zorder = 1))
     
-    text = f"{np.around(100 * vaccinated_rect_height, decimals = 1)}"
+    text = f"{np.around(100 * vaccinated_rect_height, decimals = 1)}%"
     ax.annotate(text = text, 
                 xy = (1.1,hesitant_rect_height + willing_rect_height + .1 + .5* vaccinated_rect_height), 
                 fontsize = 10, 
@@ -761,20 +765,38 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
     ax.add_patch(Rectangle((0, 0), 
                             .05, 
                             hesitant_rect_height,
-                            edgecolor = "tomato", 
-                            facecolor = "tomato", 
+                            edgecolor = cmap["hesitant"], 
+                            facecolor = cmap["hesitant"], 
                             lw = 2,
                             zorder = 1))
-    
+
+    # # Uncommment below to get left-hand annotation
+    # text = f"{np.around(100 * hesitant_rect_height, decimals = 1)}%"
+    # ax.annotate(text = text, 
+    #             xy = (-0.01,.5* hesitant_rect_height), 
+    #             fontsize = 10, 
+    #             ha = "right", 
+    #             va = "center",
+    #             **hfont)
+
     willing_rect_height = wide_df[wide_df["initial belief"] == "willing"]["freq"].sum()
     ax.add_patch(Rectangle((0, hesitant_rect_height + .1), 
                             .05, 
                             willing_rect_height,
-                            edgecolor = "gold", 
-                            facecolor = "gold", 
+                            edgecolor = cmap["willing"], 
+                            facecolor = cmap["willing"], 
                             lw = 2,
                             zorder = 1))
-    
+
+    # # Uncomment below to get left-hand annotation
+    # text = f"{np.around(100 * willing_rect_height, decimals = 1)}%"
+    # ax.annotate(text = text, 
+    #             xy = (-0.01,hesitant_rect_height + .05 + .5* willing_rect_height), 
+    #             fontsize = 10, 
+    #             ha = "right", 
+    #             va = "center",
+    #             **hfont)
+
     ax.spines.top.set_visible(False)
     ax.spines.left.set_visible(False)
     ax.spines.right.set_visible(False)
