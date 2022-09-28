@@ -644,8 +644,8 @@ def _get_wide_df(dynamic_belief_df, vaccination_threshold = -1, hesitant_thresho
             df["final belief"] = "willing"
             hes_idx = np.where(dynamic_belief_df.loc[:,c] > hesitant_threshold)[0]
             df.loc[hes_idx,"final belief"] =  "hesitant"
-            vac_idx = np.where(dynamic_belief_df.loc[:,c] <= vaccination_threshold)[0]
-            df.loc[vac_idx,"final belief"] =  "vaccinated"
+            # vac_idx = np.where(dynamic_belief_df.loc[:,c] <= vaccination_threshold)[0]
+            # df.loc[vac_idx,"final belief"] =  "vaccinated"
 
     df["freq"] = 1
 
@@ -674,11 +674,11 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
     """
     wide_df = _get_wide_df(dynamic_belief_df, vaccination_threshold, hesitant_threshold)
     hfont = {'fontname':'DejaVu Sans'}
-    cmap = {"hesitant":"chocolate","willing":"silver","vaccinated":"slategrey"}
+    cmap = {"hesitant":"#DDE318","willing":"silver"}
     y_end = 0
     y_hesitant_start = 0
     y_willing_start = wide_df[wide_df["initial belief"] == "hesitant"]["freq"].sum() + .1
-    for final in ["hesitant","willing","vaccinated"]:
+    for final in ["hesitant","willing"]:
 
         for initial in ["hesitant","willing"]:
             idx = wide_df[(wide_df["final belief"] == final)&(
@@ -706,7 +706,7 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
 
                 y_end += height
 
-        y_end += .05
+        y_end += .1
 
     ## Right hand annotations
     hesitant_rect_height = wide_df[wide_df["final belief"] == "hesitant"
@@ -720,15 +720,15 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
                             zorder = 1))
     text = f"{np.around(100 * hesitant_rect_height, decimals = 1)}%"
     ax.annotate(text = text, 
-                xy = (1.1,.5* hesitant_rect_height), 
-                fontsize = 10, 
+                xy = (1.07,.5* hesitant_rect_height), 
+                fontsize = 12, 
                 ha = "left", 
                 va = "center",
                 **hfont)
 
     willing_rect_height = wide_df[wide_df["final belief"] == "willing"
                                     ]["freq"].sum()
-    ax.add_patch(Rectangle((1, hesitant_rect_height + .05), 
+    ax.add_patch(Rectangle((1, hesitant_rect_height + .1), 
                             .05, 
                             willing_rect_height,
                             edgecolor = cmap["willing"], 
@@ -737,28 +737,28 @@ def get_alluvial_plot_axis(ax, dynamic_belief_df, vaccination_threshold,
                             zorder = 1))
     text = f"{np.around(100 * willing_rect_height, decimals = 1)}%"
     ax.annotate(text = text, 
-                xy = (1.1,hesitant_rect_height + .05 + .5* willing_rect_height), 
-                fontsize = 10, 
+                xy = (1.07,hesitant_rect_height + .1 + .5* willing_rect_height), 
+                fontsize = 12, 
                 ha = "left", 
                 va = "center",
                 **hfont)
 
-    vaccinated_rect_height = wide_df[wide_df["final belief"] == "vaccinated"]["freq"].sum()
-    ax.add_patch(Rectangle((1, hesitant_rect_height + willing_rect_height + .1), 
-                            .05, 
-                            vaccinated_rect_height,
-                            edgecolor = cmap["vaccinated"], 
-                            facecolor = cmap["vaccinated"], 
-                            lw = 2,
-                            zorder = 1))
+    # vaccinated_rect_height = wide_df[wide_df["final belief"] == "vaccinated"]["freq"].sum()
+    # ax.add_patch(Rectangle((1, hesitant_rect_height + willing_rect_height + .1), 
+    #                         .05, 
+    #                         vaccinated_rect_height,
+    #                         edgecolor = cmap["vaccinated"], 
+    #                         facecolor = cmap["vaccinated"], 
+    #                         lw = 2,
+    #                         zorder = 1))
     
-    text = f"{np.around(100 * vaccinated_rect_height, decimals = 1)}%"
-    ax.annotate(text = text, 
-                xy = (1.1,hesitant_rect_height + willing_rect_height + .1 + .5* vaccinated_rect_height), 
-                fontsize = 10, 
-                ha = "left", 
-                va = "center",
-                **hfont)
+    # text = f"{np.around(100 * vaccinated_rect_height, decimals = 1)}%"
+    # ax.annotate(text = text, 
+    #             xy = (1.1,hesitant_rect_height + willing_rect_height + .1 + .5* vaccinated_rect_height), 
+    #             fontsize = 10, 
+    #             ha = "left", 
+    #             va = "center",
+    #             **hfont)
     
     # Left hand annotations
     hesitant_rect_height = wide_df[wide_df["initial belief"] == "hesitant"]["freq"].sum()
