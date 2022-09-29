@@ -1,4 +1,4 @@
-""" Run JAMA Simulation
+""" Run JAMA simulation grid search across mega-influencer reaches
 """
 import pandas as pd
 import numpy as np
@@ -49,7 +49,7 @@ def main():
             prob_df = model.compute_probability_array(model.belief_df)
             model.adjacency_df = model.compute_adjacency(prob_df)
 
-            model.belief_df.to_csv(f"jama_simulation_results/left_reach_{l:03}_right_reach_{r:03}_belief_df.csv")
+            model.belief_df.to_csv(f"../data/simulation_results_from_paper/left_reach_{l:03}_right_reach_{r:03}/belief_df.csv")
             
             model.left_reach = left_reach
             model.right_reach = right_reach
@@ -58,7 +58,7 @@ def main():
             sim = odyn.NetworkSimulation()
             sim.run_simulation(model = model, stopping_thresh = 0.01, show_plot = False, store_results = False)
 
-            sim.dynamic_belief_df.to_csv(f"jama_simulation_results/left_reach_{l:03}_right_reach_{r:03}_dynamic_belief_df.csv")
+            sim.dynamic_belief_df.to_csv(f"../data/simulation_results_from_paper/left_reach_{l:03}_right_reach_{r:03}/dynamic_belief_df.csv")
 
 if __name__ == '__main__':
     main()
