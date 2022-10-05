@@ -6,7 +6,7 @@
 
 This repository contains Opinion Dynamics Network (ODyN) tools and data to simulate opinion dyamics on networks graphs with an application to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
 
-* [A geospatial bounded confidence model including mega-influencers with an application to Covid-19 vaccine hesitancy], Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
+* [A geospatial bounded confidence model including mega-influencers with an application to Covid-19 vaccine hesitancy](), Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
 * [Covid-19 Vaccine Hesitancy and Mega-Influencers](https://arxiv.org/pdf/2202.00630.pdf), Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
 
 ## Setting Up your ODyN Environment
