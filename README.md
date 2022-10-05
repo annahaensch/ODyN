@@ -1,11 +1,12 @@
-# ODyN for Vaccine Hesitancy
+# ODyN
 
-![ODyN.jpeg](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/ODyN.jpeg?raw=true)
+![network.png](https://github.com/annahaensch/VaccineHesitancy/blob/main/images/network.png?raw=true)
 
 ## Background
 
-This repository contains Opinion Dynamics Network (ODyN) tools and data to simulate opinion dyamics on networks graphs relevant to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
+This repository contains Opinion Dynamics Network (ODyN) tools and data to simulate opinion dyamics on networks graphs with an application to Covid-19 vaccine hesitancy.  For technical details related to this project, please see: 
 
+* [A geospatial bounded confidence model including mega-influencers with an application to Covid-19 vaccine hesitancy], Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
 * [Covid-19 Vaccine Hesitancy and Mega-Influencers](https://arxiv.org/pdf/2202.00630.pdf), Anna Haensch, Natasa Dragovic, Christoph Borgers, Bruce Boghosian.
 
 ## Setting Up your ODyN Environment
