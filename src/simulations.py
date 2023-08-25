@@ -3,9 +3,10 @@ import numpy as np
 import logging 
 import os
 import geojson
-
 import math 
 import itertools
+import sklearn 
+from sklearn.neighbors import KernelDensity
 
 import geopandas as gpd
 from geopy.geocoders import Nominatim
@@ -31,6 +32,7 @@ class OpinionNetworkModel(ABC):
                 openness_to_neighbors = 1.5,
                 openness_to_influencers = 1.5,
                 distance_scaling_factor = 1/10,
+                distance_threshold = 100,
                 importance_of_weight = 1.6, 
                 importance_of_distance = 8.5,
                 include_opinion = True,
@@ -53,8 +55,10 @@ class OpinionNetworkModel(ABC):
                 can influence; this is "b" from [1].
             openness_to_influencers: (float) distance in opinion space that 
                 mega-influencers can reach; this is "epsilon" from [1].
-            distance_scaling_factor: (float) Scale distancy by this amount, must 
+            distance_scaling_factor: (float) Scale distance by this amount, must 
                 be >0; this is "lambda" from [1].
+            distance_threshold: (int) In distance only model, this is the 
+                neighborhood radius for which connections are allowed.
             importance_of_weight: (float) Raise weights to this power, must be > 0; 
                 this is "alpha" from [1].
             importance_of_distance: (float) Raise adjusted distance to this power,
@@ -81,6 +85,7 @@ class OpinionNetworkModel(ABC):
         self.openness_to_neighbors = openness_to_neighbors
         self.openness_to_influencers = openness_to_influencers
         self.distance_scaling_factor = distance_scaling_factor
+        self.distance_threshold = distance_threshold
         self.importance_of_weight = importance_of_weight
         self.importance_of_distance = importance_of_distance
         self.include_opinion = include_opinion
@@ -99,10 +104,12 @@ class OpinionNetworkModel(ABC):
         self.clustering_coefficient = 0
         self.mean_degree = 0
 
-    def populate_model(self, num_agents = None, show_plot = False):
+    def populate_model(self, distance_only = False, num_agents = None, show_plot = False):
         """ Fully initialized but untrained OpinionNetworkModel instance.
 
         Input:
+            distance_only: (bool) if True the model makes conenctions 
+                based on distance only.
             num_agents: (int) number of agents to plot.
             show_plot: (bool) if true then plot is shown. 
         
@@ -111,32 +118,34 @@ class OpinionNetworkModel(ABC):
         """
         agent_df = self.add_random_agents_to_triangle(num_agents = num_agents,
                                             show_plot = False)
+        self.agent_df = agent_df
 
         logging.info("\n {} agents added.".format(agent_df.shape[0]))
         
         belief_df = self.assign_weights_and_beliefs(agent_df)
+        self.belief_df = belief_df
+        
         logging.info("\n Weights and beliefs assigned.")
 
-        prob_df = self.compute_probability_array(belief_df)
-        adjacency_df = self.compute_adjacency(prob_df)
+        if distance_only == True:
+            self.adjacency_df = self.compute_adjacency_distance_only()
+            self.prob_df = self.adjacency_df.copy()
+
+        else:
+            self.prob_df = self.compute_probability_array(belief_df)
+            self.adjacency_df = self.compute_adjacency(self.prob_df)
         logging.info("\n Adjacencies computed.")
 
         # Connect mega-influencers
-        mega_influencer_df = self.connect_mega_influencers(belief_df)
-        
+        self.mega_influencer_df = self.connect_mega_influencers(belief_df)
+
         # Compute network statistics.
         logging.info("\n Computing network statistics...")
-        cc, md = self.compute_network_stats(adjacency_df)
-        logging.info("\n Clustering Coefficient: {}".format(cc))
-        logging.info("\n Mean Degree: {}".format(md))
-
-        self.agent_df = agent_df
-        self.belief_df = belief_df
-        self.prob_df = prob_df
-        self.adjacency_df = adjacency_df
-        self.mega_influencer_df = mega_influencer_df
+        cc, md = self.compute_network_stats(self.adjacency_df)
         self.clustering_coefficient = cc
         self.mean_degree = md
+        logging.info("\n Clustering Coefficient: {}".format(cc))
+        logging.info("\n Mean Degree: {}".format(md))
         
         if show_plot == True:
             self.plot_initial_network()
@@ -400,10 +409,14 @@ class OpinionNetworkModel(ABC):
         power_law_exponent = self.power_law_exponent
         k = -1/(power_law_exponent)
         
-        
         assert np.sum(np.array(self.probabilities)) == 1, "Probabilities must sum to 1."
         
-        belief_df["weight"] = np.random.uniform(0,1,belief_df.shape[0]) ** (k)
+        if self.include_weight == False:
+            belief_df["weight"] = 1
+        else:
+            belief_df["weight"] = np.random.uniform(0,1,belief_df.shape[0]) ** (k)
+            belief_df["decile"] = pd.qcut(belief_df["weight"], q = 100, labels = [
+                                i for i in range(1,101)])
 
         means = np.linspace(-1,1,len(self.probabilities))
 
@@ -414,9 +427,6 @@ class OpinionNetworkModel(ABC):
         # Sample from gaussians by component
         belief = [np.random.normal(loc = means[c], scale = cov) for c in gmm_component]
         belief_df["belief"] = belief
-
-        belief_df["decile"] = pd.qcut(belief_df["weight"], q = 100, labels = [
-                                i for i in range(1,101)])
 
         if show_plot == True:
             plot_agents_with_belief_and_weight(belief_df)
@@ -505,6 +515,24 @@ class OpinionNetworkModel(ABC):
 
         return adjacency_df
 
+    def compute_adjacency_distance_only(self):
+        """ Compute NxN adjacency dataframe.
+
+        Outputs: 
+            Dataframe where row n and column m is a 1 if n influences m, 
+            and a 0 otherwise.
+        """
+        # Compute pairwise distances
+        xx = ((self.belief_df["x"].values.reshape(-1,1) - self.belief_df["x"].values.reshape(1,-1))) ** 2
+        yy = ((self.belief_df["y"].values.reshape(-1,1) - self.belief_df["y"].values.reshape(1,-1))) ** 2
+        
+        # Compute adjacency matrix
+        adjacency = np.where((xx + yy) ** ( 1/2) <= self.distance_threshold, 1, 0)
+        adjacency = adjacency - np.identity(adjacency.shape[0])
+        adjacency_df = pd.DataFrame(adjacency)
+
+        return adjacency_df
+
     def compute_network_stats(self, adjacency_df):
         """ Return clustering coefficient and mean degree. 
         
@@ -567,11 +595,13 @@ class NetworkSimulation(ABC):
         self.results = []
         self.dynamic_belief_df = None
 
-    def run_simulation(self, model, stopping_thresh = .01, show_plot = False, store_results = False):
+    def run_simulation(self, model, distance_only = False, stopping_thresh = .01, show_plot = False, store_results = False):
         """ Carry out simulation.
 
         Inputs: 
             model: OpinionNetworkModel instance.
+            distance_only: (bool) if True the model makes conenctions 
+                based on distance only.
             stopping_thresh: (float) threshold for stopping criterion.
             show_plot: (bool) if true, shows ridge plot.
             store_results: (bool) if True, stores results for all phases, if False
@@ -606,7 +636,10 @@ class NetworkSimulation(ABC):
 
             phase_dict["belief_df"] = new_belief_df
             prob_df = model.compute_probability_array(new_belief_df)
-            new_adjacency_df = model.compute_adjacency(prob_df)
+            if distance_only == True:
+                new_adjacency_df = model.adjacency_df.copy()
+            else:
+                new_adjacency_df = model.compute_adjacency(prob_df)
             new_adjacency_df.columns = [int(i) for i in new_adjacency_df.columns]
             phase_dict["adjacency_df"] = new_adjacency_df
             clust_coeff, mean_degree = model.compute_network_stats(new_adjacency_df)
@@ -633,6 +666,97 @@ class NetworkSimulation(ABC):
             self.results = results
 
         return None
+
+    def run_simulation_with_candidates(self, model, left_candidate = -1, right_candidate = 1,
+                    opportunism = .1, stopping_thresh = .01, show_plot = False, 
+                    store_results = False):
+        """ Carry out simulation.
+
+        Inputs: 
+            model: OpinionNetworkModel instance.
+            stopping_thresh: (float) threshold for stopping criterion.
+            show_plot: (bool) if true, shows ridge plot.
+            store_results: (bool) if True, stores results for all phases, if False
+                then only updating beliefs are stored.
+
+        Outputs: 
+            Complete simulation.
+        """
+
+        results = []
+        self.model = model
+        new_belief_df = model.belief_df.copy()
+        new_adjacency_df = model.adjacency_df.copy()
+        new_mega_influencer_df = model.mega_influencer_df.copy()
+
+        df = pd.DataFrame()
+        df[0] = new_belief_df["belief"].values
+
+        candidate_df = pd.DataFrame([left_candidate,right_candidate], index = ["L","R"])
+
+        self.stopping_thresh = stopping_thresh
+        stopping_df = pd.DataFrame()
+
+        i = 0
+        while True:
+            phase_dict = {}
+            new_belief_df, new_mega_influencer_df = self.one_dynamics_iteration(
+                            belief_df = new_belief_df,
+                            adjacency_df = new_adjacency_df,
+                            openness_to_influencers = model.openness_to_influencers,
+                            mega_influencer_df = new_mega_influencer_df, 
+                            threshold = model.threshold,
+                            iteration_number = i)
+
+            phase_dict["belief_df"] = new_belief_df
+            prob_df = model.compute_probability_array(new_belief_df)
+            new_adjacency_df = model.compute_adjacency(prob_df)
+            new_adjacency_df.columns = [int(i) for i in new_adjacency_df.columns]
+            phase_dict["adjacency_df"] = new_adjacency_df
+            clust_coeff, mean_degree = model.compute_network_stats(new_adjacency_df)
+            phase_dict["clust_coeff"] = clust_coeff
+            phase_dict["mean_degree"] = mean_degree
+
+            results.append(phase_dict)
+            df[i+1] = new_belief_df["belief"].values
+
+            # Update candidate positions
+            x = new_belief_df["belief"].values.reshape(-1,1)
+            kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(x)
+            
+            # Update left candidate
+            left_candidate_array = np.array([left_candidate - opportunism, 
+                                            left_candidate, 
+                                            left_candidate + opportunism])
+            left_candidate = left_candidate_array[kde.score_samples(
+                            left_candidate_array.reshape(-1,1)).argmax()]
+
+            # Update right candidate
+            right_candidate_array = np.array([right_candidate - opportunism, 
+                                            right_candidate, 
+                                            right_candidate + opportunism])
+            right_candidate = right_candidate_array[kde.score_samples(
+                            right_candidate_array.reshape(-1,1)).argmax()]
+            
+            candidate_df[i+1] = [left_candidate, right_candidate]
+
+            stopping_df[i] = df.iloc[:,i+1] - df.iloc[:,i]
+            i = i+1
+            # Check that at least 5 iterations have been carried out.       
+            if stopping_df.shape[1] > 5:
+                # If rolling average change is less than stopping_thresh, break.
+                if stopping_df.rolling(window = 5, axis = 1).mean().iloc[:,-1
+                                                    ].abs().mean() < stopping_thresh:
+                    break
+
+        self.dynamic_belief_df = df
+
+        if show_plot == True:
+            self.plot_simulation_results()
+        if store_results == True:
+            self.results = results
+
+        return candidate_df
 
     def plot_simulation_results(self):
         """ Return ridgeplot of simulation.
