@@ -13,5 +13,6 @@ pysankey
 requests
 scipy
 seaborn
+scikit-learn
 us
 
